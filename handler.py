@@ -18,8 +18,25 @@ def parse_args():
     parser = argparse.ArgumentParser('Some description')
     parser.add_argument('-f', '--func-expr', required=True, help='function (expression) written using sympy syntax. Note that all arguments should follow pattern of english alphabet: x0: a, x1: b.., xn: z (take a look at few examples as readme.md)')
     parser.add_argument('-n', '--number_of_arguments', type=int, required=True, help='number of arguments of function')
+    parser.add_argument('-m', '--method_name', required=True, help='method name (check readme.md)')
+    parser.add_argument('-gu', '--gradient_updater', required=False, help='method of step updater (only in gradient method))')
+
+    args, leftovers = parser.parse_known_args()
+
+    if args.gradient_updater is None and args.method_name == 'gradient_descent':
+        print("For gradient descent \'gradient_update\' key should be provided")
     
     return parser.parse_args()
+
+def create_function(expr, args):
+    def functor(x):
+        assert len(x) == args.number_of_arguments, 'wrong dim'
+        arg_dict = dict()
+        for i in range(args.number_of_arguments):
+            arg_dict[string.ascii_lowercase[i]] = x[i]
+        return expr.evalf(16, arg_dict)
+    return functor
+
 
 if __name__ == "__main__":
     args = parse_args()
@@ -34,8 +51,9 @@ if __name__ == "__main__":
     arg_dict = dict()
     for i in range(args.number_of_arguments):
         arg_dict[string.ascii_lowercase[i]] = i + 1
-    # check
+    # # check
     print("Some evaluation check")
     print(expr.evalf(16, subs=arg_dict))
     print("END")
+
 
