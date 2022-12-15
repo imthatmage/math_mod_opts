@@ -1,5 +1,7 @@
 import numpy as np
-from minimizers import DividingMethod, GoldenSection, GradientMethod
+from gradient_method import GradientMethod
+from golden_section import GoldenSection
+from dividing_method import DividingMethod
 from methods import broken_curve_method
 
 
@@ -13,7 +15,8 @@ gr_method = GradientMethod()
 
 
 #test_func = lambda x: x**2
-test_func = lambda x : np.cos(x)
+#test_func = lambda x : np.cos(x)
+test_func = lambda x: x**2 + np.sin(10*(x - np.pi/4))
 
 print(f"Dividing Method {ds_method.minimize(test_func, -5, 6)}")
 print()
