@@ -9,12 +9,14 @@
 2. Use the English alphabet in order to write arguments.
 
 
-### Here some examples of
+### Here some examples of function providing
 
 **-f (--func_expr)**
 
 - "sin(a)cos(b)**2 + (tan(c)*exp(-d*5))**e + sinh(f)"
 - "5**a + b + c:
+
+## Keys
 
 **-m (--method_name)**
 
@@ -32,7 +34,7 @@ Initial point (should be provided if you use gradient_descent)
 example for number_of_arguments=3: -l 0 1 3 
 
 
-**Additional ful examples**
+## Examples
 
 1. python handler.py -f "cos(a)" -n 1 -m gd -mi 1500 -p -5 -pp True -gu armicho
 2. python handler.py -f "sin(a) + cos(b)" -n 2 -m gd -mi 1500 -p -5 2 -pp True -gu monotone
