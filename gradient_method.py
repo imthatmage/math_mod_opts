@@ -5,7 +5,7 @@ import warnings
 from minimizer import Minimizer
 
 class GradientMethod(Minimizer):
-    def __init__(self, method_name='armicho', n=500, eps=1e-2):
+    def __init__(self, method_name='armicho', n=500, eps=1e-2, print_points=False):
         '''
         Gradient descent optimizer
 
@@ -23,6 +23,7 @@ class GradientMethod(Minimizer):
         self.n = n
         self.eps = eps
         self.points = []
+        self.print_points = print_points
     
     def get_abs_grad(self, vector):
         return np.sqrt((vector**2).sum())
@@ -48,6 +49,9 @@ class GradientMethod(Minimizer):
         x0: first approximation point
         '''
         self.points.append(x0)
+        if self.print_points:
+            print(f"1. {x0}")
+        
         method_name = self.method_name
         n = self.n
         eps = self.eps
@@ -101,7 +105,10 @@ class GradientMethod(Minimizer):
 
             x1 = x0 - eps*gradient
 
-        self.append(x1)
+        self.points.append(x1)
+        if self.print_points:
+            print(f"2. {x1}")
+
         return self._gradient_method(func, x1, eps, method_name, 1, n)
 
     def _gradient_method(self, func, xn, eps, method_name, itera, n):
@@ -144,7 +151,11 @@ class GradientMethod(Minimizer):
             eps = c*(itera+1)**(-alpha)
 
             xn1 = xn - eps*gradient
+            
         self.points.append(xn1)
+        if self.print_points:
+            print(f"{itera+1}. {xn1}")
+
         return self._gradient_method(func, xn1, eps, method_name, itera + 1, n)
 
     def get_path(self):
