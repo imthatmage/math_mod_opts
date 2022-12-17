@@ -25,7 +25,7 @@ class GradientMethod(Minimizer):
         self.points = []
         self.print_points = print_points
     
-    def get_abs_grad(self, vector):
+    def get_abs_vec(self, vector):
         return np.sqrt((vector**2).sum())
 
 
@@ -88,7 +88,7 @@ class GradientMethod(Minimizer):
             alpha = 1e-1
             lmbd = 1/2
             degree = 2
-            while func(x0) - func(x0 - eps*gradient) < alpha*eps*self.get_abs_grad(gradient)**2:
+            while func(x0) - func(x0 - eps*gradient) < alpha*eps*self.get_abs_vec(gradient)**2:
                 eps = lmbd**degree
                 degree += 1
 
@@ -135,7 +135,7 @@ class GradientMethod(Minimizer):
             alpha = 1e-1
             lmbd = 1/2
             degree = 2
-            while func(xn) - func(xn - eps*gradient) < alpha*eps*self.get_abs_grad(gradient)**2:
+            while func(xn) - func(xn - eps*gradient) < alpha*eps*self.get_abs_vec(gradient)**2:
                 eps = lmbd**degree
                 degree += 1
 
