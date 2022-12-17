@@ -3,10 +3,12 @@ from minimizer import Minimizer
 import warnings
 import sys
 import random
-
+import matplotlib.pyplot as plt
+from matplotlib.collections import LineCollection
+from matplotlib.colors import ListedColormap, BoundaryNorm
 
 class GradientProjectionMethod(Minimizer):
-    def __init__(self, method_name='armicho', n=500, eps=1e-2, print_points=False, area_name = 'sphere', C=0, R=4):
+    def __init__(self, method_name='armicho', n=500, eps=1e-2, print_points=False, area_name = 'sphere', C=0, R=4, verbose=False):
         '''
         Gradient descent optimizer with projection
 
@@ -19,6 +21,7 @@ class GradientProjectionMethod(Minimizer):
         area_name: name of considered area
         C: center of sphere (for area_name: 'sphere')
         R: radius of sphere (for area_name: 'sphere')
+        verbose: adds some visualisation of process
 
         for method_name available methods: monotone, armicho
 
@@ -32,6 +35,7 @@ class GradientProjectionMethod(Minimizer):
         self.area_name = 'sphere'
         self.R = R
         self.C = C
+        self.verbose = verbose
     
     def get_abs_vec(self, vector):
         return np.sqrt((vector**2).sum())
@@ -68,6 +72,7 @@ class GradientProjectionMethod(Minimizer):
         k: number of variables
         x0: first approximation point
         '''
+        self.func = func
         method_name = self.method_name
         n = self.n
         eps = self.eps
@@ -126,7 +131,10 @@ class GradientProjectionMethod(Minimizer):
         if self.print_points:
             print(f"2. {x1}")
 
-        return self._gradient_method(func, x1, eps, method_name, 1, n)
+        res_point =  self._gradient_method(func, x1, eps, method_name, 1, n)
+        if self.verbose:
+            self.visualize_results()
+        return res_point
 
     def _gradient_method(self, func, xn, eps, method_name, itera, n):
         gradient = self.get_gradient(func, xn)
@@ -177,3 +185,36 @@ class GradientProjectionMethod(Minimizer):
 
     def get_path(self):
         return self.points
+    
+    def visualize_results(self):
+        if not self.verbose:
+            return
+        if self.area_name == 'sphere' and len(self.C) == 2:
+            fig, ax = plt.subplots()
+            print('fasfa')
+            values = np.linspace(0, 2*np.pi, 500)
+            xc = self.C[0]+ self.R*np.cos(values)
+            yc = self.C[1] + self.R*np.sin(values)
+
+            f_values = []
+
+            for point in self.points:
+                f_values.append(self.func(point))
+            self.points = np.array(self.points)
+
+            origin = np.zeros((len(self.C), len(self.points) - 1))
+
+            origin = self.points[:-1, :]
+            
+            dir_vectors = np.zeros(((len(self.points) - 1), 2))
+
+            for i in range(len(self.points) - 1):
+                dir_vectors[i] = self.points[i + 1] - self.points[i]
+
+            xs, ys = origin[:, 0], origin[:, 1]
+            x, y = dir_vectors[:, 0], dir_vectors[:, 1]
+
+            plt.plot(xc, yc, label='E0', color='black')
+            plt.quiver(xs, ys, x, y, color='red', angles='xy', scale_units='xy', scale=1)
+            
+            plt.show()
