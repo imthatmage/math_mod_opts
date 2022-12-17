@@ -2,6 +2,7 @@ import numpy as np
 from gradient_method import GradientMethod
 from golden_section import GoldenSection
 from dividing_method import DividingMethod
+from gradient_projection import GradientProjectionMethod
 from methods import broken_curve_method
 
 
@@ -12,7 +13,7 @@ def test_func_add(x):
 gs_method = GoldenSection()
 ds_method = DividingMethod()
 gr_method = GradientMethod()
-
+gp_method = GradientProjectionMethod(area_name='sphere', R=4, C=[0, 0])
 
 #test_func = lambda x: x**2
 #test_func = lambda x : np.cos(x)
@@ -38,17 +39,12 @@ for name in ['monotone', 'armicho', 'apriori']:
     print(f"Gradient method: {gr_method.minimize(test_func_add, 2, [2, 5])}")
     print()
 
+print()
 
-# broken curve
-a=0
-b=10
-L = 2 
-
-x = np.linspace(a, b)
-y = np.sin(x)
-
-#xlist, plist = broken_curve_method(math.sin, a, b, L, dividing_method, 100)
-
-#plt.scatter(xlist, plist)
-#plt.show()
-# end
+for name in ['monotone', 'armicho', 'apriori']:
+    gp_method = GradientProjectionMethod(method_name=name, area_name='sphere', R=4, C=0)
+    print(f"GMP: {name}")
+    print(f"GMP: {gp_method.minimize(test_func, 1, [3])}")
+    gp_method = GradientProjectionMethod(method_name=name, area_name='sphere', R=4, C=[0, 0], n=20, verbose=True)
+    print(f"GMP: {gp_method.minimize(test_func_add, 2, [2, 5])}")
+    print()
