@@ -8,7 +8,8 @@ from matplotlib.collections import LineCollection
 from matplotlib.colors import ListedColormap, BoundaryNorm
 
 class GradientProjectionMethod(Minimizer):
-    def __init__(self, method_name='armicho', n=500, eps=1e-2, print_points=False, area_name = 'sphere', C=0, R=4, verbose=False):
+    def __init__(self, method_name='armicho', n=500, eps=1e-2, print_points=False, 
+                 area_name = 'sphere', C=0, R=4, verbose=False, full_vis=False):
         '''
         Gradient descent optimizer with projection
 
@@ -36,6 +37,7 @@ class GradientProjectionMethod(Minimizer):
         self.R = R
         self.C = C
         self.verbose = verbose
+        self.full_vis = full_vis
     
     def get_abs_vec(self, vector):
         return np.sqrt((vector**2).sum())
@@ -132,6 +134,7 @@ class GradientProjectionMethod(Minimizer):
             print(f"2. {x1}")
 
         res_point =  self._gradient_method(func, x1, eps, method_name, 1, n)
+        self.res_points = res_point
         if self.verbose:
             self.visualize_results()
         return res_point
@@ -189,7 +192,52 @@ class GradientProjectionMethod(Minimizer):
     def visualize_results(self):
         if not self.verbose:
             return
-        if self.area_name == 'sphere' and len(self.C) == 2:
+        if self.full_vis and len(self.C) == 2:
+            self.points = np.array(self.points)
+            import plotly.graph_objects as go
+            layout = go.Layout(width = 700, height =700, title_text='Chasing global Minima')
+            # visualize function
+            left_point = self.points[0] - (self.points[-1] - self.points[0])/2
+            right_point = self.points[-1] + (self.points[-1] - self.points[0])/2
+
+            X = np.linspace(left_point[0], right_point[0], 500)
+            Y = np.linspace(left_point[1], right_point[1], 500)
+
+            Z = np.zeros((X.shape[0], Y.shape[0]))
+
+            for i in range(X.shape[0]):
+                for j in range(Y.shape[0]):
+                    Z[j, i] = self.func([X[i], Y[j]])
+            # show path
+            f_values = []
+
+            for point in self.points:
+                f_values.append(self.func(point))
+
+            f_values = np.array(f_values)[:, None]
+
+            or_vectors = np.concatenate((self.points[1:], f_values[1:]), axis=-1)
+            dir_vectors = np.zeros((self.points.shape[0], 3))
+
+            for i in range(len(or_vectors) - 1):
+                dir_vectors[i] = 10*(or_vectors[i+1] - or_vectors[i])
+            
+            fig = go.Figure(data=[go.Cone(
+                x=or_vectors[:, 0],
+                y=or_vectors[:, 1],
+                z=or_vectors[:, 2],
+                u=dir_vectors[:, 0],
+                v=dir_vectors[:, 1],
+                w=dir_vectors[:, 2],
+                sizemode="absolute", colorscale='Viridis'), 
+                go.Surface(x = X, y = Y, z=Z, colorscale='Blues')], layout=layout)
+
+            fig.update_layout(
+                scene=dict(domain_x=[0, 1],
+                            camera_eye=dict(x=-1.57, y=1.36, z=0.58)))
+
+            fig.show()
+        elif self.area_name == 'sphere' and len(self.C) == 2:
             fig, ax = plt.subplots()
             print('fasfa')
             values = np.linspace(0, 2*np.pi, 500)
@@ -218,3 +266,35 @@ class GradientProjectionMethod(Minimizer):
             plt.quiver(xs, ys, x, y, color='red', angles='xy', scale_units='xy', scale=1)
             
             plt.show()
+        
+
+        if self.area_name == 'sphere' and len(self.C) == 3:
+            self.points = np.array(self.points)
+            import plotly.graph_objects as go
+            layout = go.Layout(width = 700, height =700, title_text='Chasing global Minima')
+            # show path
+            or_vectors = self.points
+            dir_vectors = np.zeros((self.points.shape[0], 3))
+
+            for i in range(len(or_vectors) - 1):
+                dir_vectors[i] = 10*(or_vectors[i+1] - or_vectors[i])
+
+            f_values = []
+
+            for point in self.points:
+                f_values.append(self.func(point))
+            
+            fig = go.Figure(data=[go.Cone(
+                x=or_vectors[:, 0],
+                y=or_vectors[:, 1],
+                z=or_vectors[:, 2],
+                u=dir_vectors[:, 0],
+                v=dir_vectors[:, 1],
+                w=dir_vectors[:, 2],
+                sizemode="absolute")], layout=layout)
+
+            fig.update_layout(
+                scene=dict(domain_x=[0, 1],
+                            camera_eye=dict(x=-1.57, y=1.36, z=0.58)))
+
+            fig.show()
