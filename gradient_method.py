@@ -3,9 +3,10 @@ import sys
 import random
 import warnings
 from minimizer import Minimizer
+import matplotlib.pyplot as plt
 
 class GradientMethod(Minimizer):
-    def __init__(self, method_name='armicho', n=500, eps=1e-2, print_points=False):
+    def __init__(self, method_name='armicho', n=500, eps=1e-2, print_points=False, verbose=False, full_vis=False):
         '''
         Gradient descent optimizer
 
@@ -14,6 +15,7 @@ class GradientMethod(Minimizer):
         method_name: name of method for gradient step update
         n: max_number of iterations
         eps: step for gradient descent
+        verbose: adds some visualisation of process
 
         for method_name available methods: monotone, armicho
 
@@ -24,6 +26,8 @@ class GradientMethod(Minimizer):
         self.eps = eps
         self.points = []
         self.print_points = print_points
+        self.verbose = verbose
+        self.full_vis = full_vis
     
     def get_abs_vec(self, vector):
         return np.sqrt((vector**2).sum())
@@ -48,12 +52,15 @@ class GradientMethod(Minimizer):
         k: number of variables
         x0: first approximation point
         '''
+        self.k = k
+        self.func = func
         self.points.append(x0)
         if self.print_points:
             print(f"1. {x0}")
         
         method_name = self.method_name
         n = self.n
+        
         eps = self.eps
         if n > 999:
             sys.setrecursionlimit(n+100)
@@ -109,7 +116,12 @@ class GradientMethod(Minimizer):
         if self.print_points:
             print(f"2. {x1}")
 
-        return self._gradient_method(func, x1, eps, method_name, 1, n)
+        res_point = self._gradient_method(func, x1, eps, method_name, 1, n)
+
+        if self.verbose:
+            self.visualize_results()
+
+        return res_point
 
     def _gradient_method(self, func, xn, eps, method_name, itera, n):
         gradient = self.get_gradient(func, xn)
@@ -160,3 +172,108 @@ class GradientMethod(Minimizer):
 
     def get_path(self):
         return self.points
+    
+    def visualize_results(self):
+        if not self.verbose:
+            return
+        if self.full_vis and self.k == 2:
+            self.points = np.array(self.points)
+            import plotly.graph_objects as go
+            layout = go.Layout(width = 700, height =700, title_text='Chasing global Minima')
+            # visualize function
+            left_point = self.points[0] - (self.points[-1] - self.points[0])/2
+            right_point = self.points[-1] + (self.points[-1] - self.points[0])/2
+
+            X = np.linspace(left_point[0], right_point[0], 500)
+            Y = np.linspace(left_point[1], right_point[1], 500)
+
+            Z = np.zeros((X.shape[0], Y.shape[0]))
+
+            for i in range(X.shape[0]):
+                for j in range(Y.shape[0]):
+                    Z[j, i] = self.func([X[i], Y[j]])
+            # show path
+            f_values = []
+
+            for point in self.points:
+                f_values.append(self.func(point))
+
+            f_values = np.array(f_values)[:, None]
+
+            or_vectors = np.concatenate((self.points[1:], f_values[1:]), axis=-1)
+            dir_vectors = np.zeros((self.points.shape[0], 3))
+
+            for i in range(len(or_vectors) - 1):
+                dir_vectors[i] = 10*(or_vectors[i+1] - or_vectors[i])
+            
+            fig = go.Figure(data=[go.Cone(
+                x=or_vectors[:, 0],
+                y=or_vectors[:, 1],
+                z=or_vectors[:, 2],
+                u=dir_vectors[:, 0],
+                v=dir_vectors[:, 1],
+                w=dir_vectors[:, 2],
+                sizemode="absolute", colorscale='Viridis'), 
+                go.Surface(x = X, y = Y, z=Z, colorscale='Blues')], layout=layout)
+
+            fig.update_layout(
+                scene=dict(domain_x=[0, 1],
+                            camera_eye=dict(x=-1.57, y=1.36, z=0.58)))
+
+            fig.show()
+        elif self.k == 2:
+            fig, ax = plt.subplots()
+
+            f_values = []
+
+            for point in self.points:
+                f_values.append(self.func(point))
+            self.points = np.array(self.points)
+
+            origin = np.zeros((len(self.C), len(self.points) - 1))
+
+            origin = self.points[:-1, :]
+            
+            dir_vectors = np.zeros(((len(self.points) - 1), 2))
+
+            for i in range(len(self.points) - 1):
+                dir_vectors[i] = self.points[i + 1] - self.points[i]
+
+            xs, ys = origin[:, 0], origin[:, 1]
+            x, y = dir_vectors[:, 0], dir_vectors[:, 1]
+
+            plt.quiver(xs, ys, x, y, color='red', angles='xy', scale_units='xy', scale=1)
+            
+            plt.show()
+        
+
+        if self.k == 3:
+            self.points = np.array(self.points)
+            import plotly.graph_objects as go
+            layout = go.Layout(width = 700, height =700, title_text='Chasing global Minima')
+            # show path
+            or_vectors = self.points
+            dir_vectors = np.zeros((self.points.shape[0], 3))
+
+            for i in range(len(or_vectors) - 1):
+                dir_vectors[i] = 10*(or_vectors[i+1] - or_vectors[i])
+
+            f_values = []
+
+            for point in self.points:
+                f_values.append(self.func(point))
+            
+            fig = go.Figure(data=[go.Cone(
+                x=or_vectors[:, 0],
+                y=or_vectors[:, 1],
+                z=or_vectors[:, 2],
+                u=dir_vectors[:, 0],
+                v=dir_vectors[:, 1],
+                w=dir_vectors[:, 2],
+                sizemode="absolute")], layout=layout)
+
+            fig.update_layout(
+                scene=dict(domain_x=[0, 1],
+                            camera_eye=dict(x=-1.57, y=1.36, z=0.58)))
+
+            fig.show()
