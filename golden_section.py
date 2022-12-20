@@ -77,8 +77,8 @@ class GoldenSection(Minimizer):
         ylist = [func(x) for x in xlist]
         
         fig = plt.figure()
-        plt.xlim((min(xlist), max(xlist)))
-        plt.ylim((min(ylist), min(ylist) + (max(xlist) - min(xlist))))
+        plt.xlim((min(xlist) - 1, max(xlist) + 1))
+        plt.ylim((min(ylist) - 10, max(ylist)))
         l1, = plt.plot([], [],  marker="o", markersize=5, c="red")
         l2, = plt.plot([], [],  marker="o", markersize=5, c="green")
 
