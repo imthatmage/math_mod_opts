@@ -51,10 +51,13 @@ class BrokenLinesMethod():
         print("L", round(L, 5))
         for i in range(n):
             x_path.append(self.get_x_new(func, a, b, m, x_path, L, eps))
+            if(x_path[len(x_path) - 1] == x_path[len(x_path) - 2]):
+                break
             percent = (i + 1) / n * 100
             if int(percent) == percent:
                 print(percent, '%', sep='', end='\r')
-        self.visualize_results(func, X, x_path)
+        print("Saveing visualization")
+        self.visualize_results(func, a, b, m, x_path)
         return round(x_path[-1], 5)
 
     def minimize(self, func, a, b, m, x_0, n):
@@ -75,14 +78,14 @@ class BrokenLinesMethod():
         return x
 
 
-    def visualize_results(self, func, X, x_path):
-        xlist = X
-        ylist = [func(x) for x in X]
+    def visualize_results(self, func, a, b, m, x_path):
+        xlist = np.linspace(a, b, m)
+        ylist = [func(x) for x in xlist]
         
         fig = plt.figure()
-        plt.xlim((min(xlist), max(xlist)))
-        plt.ylim((min(ylist), min(ylist) + (max(xlist) - min(xlist))))
-        l, = plt.plot([], [],  marker="o", markersize=5, c="red")
+        plt.xlim((min(xlist) - 1, max(xlist) + 1))
+        plt.ylim((min(ylist) - 10, max(ylist)))
+        l, = plt.plot([], [],  marker="o", markersize=4, c="red")
 
         metadata = dict(title="Movie")
         writer = PillowWriter(fps=2, metadata=metadata)
@@ -92,6 +95,11 @@ class BrokenLinesMethod():
             for i in range(len(x_path)):
                 plt.title(f"{i} iteration")
                 l.set_data(x_path[i], func(x_path[i]))
+
+                L = self.get_L(func, a, b, m)
+                y_new = [self.get_p_i(func, x, x_path, i, L) for x in xlist]
+                plt.plot(xlist, y_new, c="black", linewidth=1)
+
                 writer.grab_frame()
 
         
