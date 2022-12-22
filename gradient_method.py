@@ -184,8 +184,10 @@ class GradientMethod(Minimizer):
             left_point = self.points[0] - (self.points[-1] - self.points[0])/2
             right_point = self.points[-1] + (self.points[-1] - self.points[0])/2
 
-            X = np.linspace(left_point[0], right_point[0], 500)
-            Y = np.linspace(left_point[1], right_point[1], 500)
+            n_dots = 100
+
+            X = np.linspace(left_point[0], right_point[0], n_dots)
+            Y = np.linspace(left_point[1], right_point[1], n_dots)
 
             Z = np.zeros((X.shape[0], Y.shape[0]))
 
