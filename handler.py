@@ -12,6 +12,9 @@ from gradient_method import GradientMethod
 from golden_section import GoldenSection
 from dividing_method import DividingMethod
 from gradient_projection import  GradientProjectionMethod
+from broken_lines_method import BrokenLinesMethod
+from tangent_method import TangentMethod
+from gradient_conditional import GradientConditionalMethod
 
 
 def parse_arg_func(arg_dict, n, var_list):
@@ -31,10 +34,12 @@ def parse_args():
 
     parser.add_argument('-m', '--method_name', required=True, 
                 choices=['gradient_descent', 'gd', 'dividing_segment', 'ds', 
-                         'golden_section', 'gs', 'gradient_projection', 'gp'], 
+                         'golden_section', 'gs', 'gradient_projection', 'gp',
+                         'broken_lines', 'bl', 'tangent', 'tg', 
+                         'gradient_conditional', 'gc'], 
                 help='method name (check readme.md)')
 
-    parser.add_argument('-mi', '--max_iterations', type=int, default=1000,
+    parser.add_argument('-mi', '--max_iterations', type=int, default=100,
                 help='max number of iterations')
 
     parser.add_argument('-p','--init_point', nargs='*', type=float, help='Initial point (check readme.md)')
@@ -47,7 +52,7 @@ def parse_args():
 
     parser.add_argument('-v', '--verbose', type=bool, default=False, required=False, help='visualisation in space of arguments (only for 2d and 3d with gradient methods)')
 
-    parser.add_argument('-fv', '--full_vis', type=bool, default=False, required=False, help='visualisation of point update (only for 2d and 3d with gradient methods)')
+    parser.add_argument('-fv', '--full_vis', type=bool, default=False, required=False, help='visualisation of point update (only for 1d, 2d and 3d with gradient methods)')
 
     parser.add_argument('-aname', '--area_name', default='sphere', required=False, help='area name in gradient_projection method. available: \'sphere\',')
 
@@ -60,7 +65,7 @@ def parse_args():
                 help='indentation parameter, should be greater than eps (only for dividing_segment method)',
                 default=1e-10)
     parser.add_argument('-e', '--eps', type=float,
-                help='minimal distance to minumum (only for ds and gs methods)',
+                help='minimal distance to minumum (only for 1d methods)',
                 default=1e-9)
     
     parser.add_argument('-a', '--a', type=float, required=False,
@@ -68,6 +73,9 @@ def parse_args():
 
     parser.add_argument('-b', '--b', type=float, required=False,
                 help='right edge of considered segment')
+
+    parser.add_argument('-n_delta', '--n_delta', type=int, default=200, required=False,
+                help='number of points in interval')
 
     
 
@@ -85,7 +93,7 @@ def parse_args():
 def create_function(expr, args):
     def functor(x):
         # 1d variant hardcoded
-        if type(x) is float and args.number_of_arguments == 1:
+        if type(x) is float or type(x) is np.float64 and args.number_of_arguments == 1:
             arg_dict = dict()
             arg_dict['a'] = x
             return float(expr.evalf(16, arg_dict))
@@ -134,12 +142,31 @@ if __name__ == "__main__":
         if not args.print_points:
             print(f'Founded point: {point}')
 
+    elif args.method_name in ['gradient_conditional', 'gc']:
+        gc_method = GradientConditionalMethod(method_name=args.gradient_updater, 
+                    n=args.max_iterations, print_points=args.print_points, 
+                    area_name=args.area_name, R=args.radius, C=args.center,
+                    verbose=args.verbose, full_vis=args.full_vis)
+        point = gc_method.minimize(f_to_min, args.number_of_arguments, args.init_point)
+        if not args.print_points:
+            print(f'Founded point: {point}')
+
     elif args.method_name in ['dividing_segment', 'ds']:
-        ds_method = DividingMethod(delta=args.delta, eps=args.eps, n=args.max_iterations)
+        ds_method = DividingMethod(delta=args.delta, eps=args.eps, n=args.max_iterations, full_vis=args.full_vis)
         point = ds_method.minimize(f_to_min, args.a, args.b)
         print(f'Founded point: {point}')
     
     elif args.method_name in ['golden_section', 'gs']:
-        ds_method = GoldenSection(eps=args.eps, n=args.max_iterations)
+        ds_method = GoldenSection(eps=args.eps, n=args.max_iterations, full_vis=args.full_vis)
         point = ds_method.minimize(f_to_min, args.a, args.b)
+        print(f'Founded point: {point}')
+
+    elif args.method_name in ['broken_lines', 'bl']:
+        bl_method = BrokenLinesMethod(eps=args.eps, m=args.n_delta,  n=args.max_iterations, full_vis=args.full_vis)
+        point = bl_method.minimize(f_to_min, a=args.a, b=args.b, x_0=args.init_point[0])
+        print(f'Founded point: {point}')
+
+    elif args.method_name in ['tangent', 'tg']:
+        tg_method = TangentMethod(eps=args.eps, h=args.delta, m=args.n_delta, n=args.max_iterations, full_vis=args.full_vis)
+        point = tg_method.minimize(f_to_min, a=args.a, b=args.b, x_0=args.init_point[0])
         print(f'Founded point: {point}')
