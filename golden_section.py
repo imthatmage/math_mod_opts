@@ -5,7 +5,7 @@ import math
 from minimizer import Minimizer
 
 class GoldenSection(Minimizer):
-    def __init__(self, eps=1e-10, n=900, x_path = []):
+    def __init__(self, eps=1e-10, n=900, x_path = [], full_vis=False):
         '''
         Golden section optimizer
 
@@ -14,10 +14,12 @@ class GoldenSection(Minimizer):
         eps: minimal distance to minumum
         n: maximum iteration
         x_path: list of pairs [x1_i, x2_i], where x1_i and x2_i is a points of golden ratio on i-th iteration
+        full_vis: make visualization (False as default)
         '''
         self.eps = eps
         self.n = n
         self.x_path = x_path
+        self.full_vis = full_vis
 
     def _golden_section(self, func, a1, b1, itera, eps, n, x_path): 
         x1 = a1 + (3 - math.sqrt(5))/2*(b1-a1) 
@@ -55,6 +57,7 @@ class GoldenSection(Minimizer):
         eps = self.eps
         n = self.n
         x_path = self.x_path
+        full_vis = self.full_vis
         x1 = a1 + (3 - math.sqrt(5))/2*(b1-a1)
         x2 = a1 + (math.sqrt(5) - 1)/2*(b1-a1)
         x_path.append([x1, x2])
@@ -69,7 +72,9 @@ class GoldenSection(Minimizer):
             s_x2 = x2
 
         x = self._golden_section(func, a2, b2, 1, eps, n, x_path)
-        self.visualize_results(func, a1, b1, x_path)
+        if full_vis:
+            print("Saving visualization", '\r')
+            self.visualize_results(func, a1, b1, x_path)
         return x 
 
     def visualize_results(self, func, a, b, x_path):
@@ -78,14 +83,14 @@ class GoldenSection(Minimizer):
         
         fig = plt.figure()
         plt.xlim((min(xlist) - 1, max(xlist) + 1))
-        plt.ylim((min(ylist) - 10, max(ylist)))
+        plt.ylim((min(ylist) - 10, max(ylist) + 1))
         l1, = plt.plot([], [],  marker="o", markersize=5, c="red")
         l2, = plt.plot([], [],  marker="o", markersize=5, c="green")
 
         metadata = dict(title="Movie")
         writer = PillowWriter(fps=2, metadata=metadata)
 
-        with writer.saving(fig, "Golden section method.gif", dpi=300):
+        with writer.saving(fig, "Golden section method.gif", dpi=200):
             plt.plot(xlist, ylist, c='b')
             for i in range(len(x_path)):
                 plt.title(f"{i} iteration")
