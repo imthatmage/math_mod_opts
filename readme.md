@@ -46,3 +46,11 @@ example for number_of_arguments=3: -l 0 1 3
 5. python handler.py -f "(a+5)**2 + b**2 + (c-3)**2" -n 3 -m gp -mi 50 -p 2 5 -4 -pp True -gu armicho -aname sphere -R 10 -C 0 0 0 -v True -fv True
 6. python handler.py -f "(a+5)**2 + sin(10*(b - pi/4))" -n 2 -m gp -mi 50 -p 2 5 -pp True -gu monotone -aname sphere -R 2 -C -5 0  -v True -fv True
 
+1. python handler.py -f "cos(a)" -n 1 -a -7 -b 9 -m ds -mi 100 -p -5 -fv True
+2. python handler.py -f "a**2 + sin(10*a)" -n 1 -a -7 -b 9 -m gs -mi 100 -p -5 -fv True
+3. python handler.py -f "a**2" -n 1 -a -7 -b 9 -m tg -mi 100 -n_delta 100 -p -5 -fv True
+4. python handler.py -f "a**2 + sin(3*a)" -n 1 -a -1 -b 1 -m bl -mi 200 -n_delta 100 -p -0.5 -fv True
+5. python handler.py -f "sin(a) + cos(b)" -n 2 -m gd -mi 1500 -p -5 2 -pp True -gu armicho -v True -fv True
+6. python handler.py -f "a**2 + sin(b)" -n 2 -m gp -mi 1500 -p -5 2 -pp True -gu armicho -v True -fv True -aname sphere -R 1 -C 0 2
+7. python handler.py -f "a**2 + sin(b)" -n 2 -m gc -mi 1500 -p -5 2 -pp True -gu armicho -v True -fv True -aname sphere -R 1 -C 0 2
+8. python handler.py -f "a**2 + sin(b)" -n 2 -m gc -mi 1500 -p -5 2 -pp True -gu monotone -v True -fv True -aname sphere -R 1 -C 0 2
