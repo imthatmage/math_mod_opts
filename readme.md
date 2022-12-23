@@ -20,7 +20,7 @@
 
 **-m (--method_name)**
 
-Available names: gradient_descent (short variant: gd), dividing_segment (ds), golden_section (gs), gradient_projection(gp)
+Available names: gradient_descent (short variant: gd), broken_lines (bl), tangent (tg) dividing_segment (ds), golden_section (gs), gradient_projection(gp), gradient_conditional(gc)
 
 **-gu (--gradient_updater)**
 
