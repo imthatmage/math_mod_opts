@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from matplotlib.animation import PillowWriter
 
 class TangentMethod():
-    def __init__(self, eps=1e-9, h=1e-5):
+    def __init__(self, eps=1e-9, h=1e-5, m=1000, n=100, full_vis=False):
         '''
         Tangent optimizer
 
@@ -12,9 +12,15 @@ class TangentMethod():
         ---------
         eps: minimal distance to minumum
         h: offset value in the difference method
+        m: number of points in interval
+        n: number of iterations
+        full_vis: make visualization (False as default)
         '''
         self.eps = eps
         self.h = h
+        self.m = m
+        self.n = n
+        self.full_vis = full_vis
 
     def get_func_der(self, func, x, h):
         func_der = -(func(x + h) - func(x - h)) / (2 * h)
@@ -38,7 +44,7 @@ class TangentMethod():
                 x_new = X[i]
         return x_new
 
-    def _tangent_method(self, func, a, b, m, x_0, n, eps, h):
+    def _tangent_method(self, func, a, b, m, x_0, n, eps, h, full_vis):
         X = np.linspace(a, b, m)
         x_path = []
         x_path.append(x_0)
@@ -49,10 +55,12 @@ class TangentMethod():
             percent = (i + 1) / n * 100
             if int(percent) == percent:
                 print(percent, '%', sep='', end='\r')
-        self.visualize_results(func, a, b, m, x_path, h)
+        if full_vis:
+            print("Saving visualization", end='\r')
+            self.visualize_results(func, a, b, m, x_path, h)
         return round(x_path[-1], 5)
 
-    def minimize(self, func, a, b, m, x_0, n):
+    def minimize(self, func, a, b, x_0):
         '''
         Tangent optimizer method
 
@@ -61,13 +69,14 @@ class TangentMethod():
         func: convex function to minimize
         a: left edge of considered segment
         b: right edge of considered segment
-        m: number of points in interval
         x_0: starting point
-        n: max number of iterations, n <= m
         '''
         eps = self.eps
         h = self.h
-        x = self._tangent_method(func, a, b, m, x_0, n, eps, h)
+        m = self.m
+        n = self.n
+        full_vis = self.full_vis
+        x = self._tangent_method(func, a, b, m, x_0, n, eps, h, full_vis)
         return x
 
 

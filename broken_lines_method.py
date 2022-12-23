@@ -4,15 +4,21 @@ import matplotlib.pyplot as plt
 from matplotlib.animation import PillowWriter
 
 class BrokenLinesMethod():
-    def __init__(self, eps=1e-9):
+    def __init__(self, eps=1e-9, m=500, n=100, full_vis=False):
         '''
         Broken lines optimizer
 
         Arguments
         ---------
         eps: minimal distance to minumum
+        m: number of points in interval
+        n: number of iterations
+        full_vis: make visualization (False as default)
         '''
         self.eps = eps
+        self.m = m
+        self.n = n
+        self.full_vis = full_vis
 
     def get_L(self, func, a, b, m):
         X = np.linspace(a, b, m)
@@ -43,7 +49,7 @@ class BrokenLinesMethod():
                 x_new = X[i]
         return x_new
 
-    def _broken_lines_method(self, func, a, b, m, x_0, n, eps):
+    def _broken_lines_method(self, func, a, b, m, x_0, n, eps, full_vis):
         X = np.linspace(a, b, m)
         x_path = []
         x_path.append(x_0)
@@ -56,11 +62,12 @@ class BrokenLinesMethod():
             percent = (i + 1) / n * 100
             if int(percent) == percent:
                 print(percent, '%', sep='', end='\r')
-        print("Saveing visualization")
-        self.visualize_results(func, a, b, m, x_path)
+        if full_vis:
+            print("Saving visualization", end='\r')
+            self.visualize_results(func, a, b, m, x_path)
         return round(x_path[-1], 5)
 
-    def minimize(self, func, a, b, m, x_0, n):
+    def minimize(self, func, a, b, x_0):
         '''
         Broken lines optimizer method
 
@@ -69,12 +76,13 @@ class BrokenLinesMethod():
         func: lipschitz function to minimize
         a: left edge of considered segment
         b: right edge of considered segment
-        m: number of points in interval
         x_0: starting point
-        n: number of iterations
         '''
         eps = self.eps
-        x = self._broken_lines_method(func, a, b, m, x_0, n, eps)
+        m = self.m
+        n = self.n
+        full_vis = self.full_vis
+        x = self._broken_lines_method(func, a, b, m, x_0, n, eps, full_vis)
         return x
 
 
@@ -84,13 +92,13 @@ class BrokenLinesMethod():
         
         fig = plt.figure()
         plt.xlim((min(xlist) - 1, max(xlist) + 1))
-        plt.ylim((min(ylist) - 10, max(ylist)))
+        plt.ylim((min(ylist) - 10, max(ylist) + 1))
         l, = plt.plot([], [],  marker="o", markersize=4, c="red")
 
         metadata = dict(title="Movie")
-        writer = PillowWriter(fps=2, metadata=metadata)
+        writer = PillowWriter(fps=1, metadata=metadata)
 
-        with writer.saving(fig, "Broken lines method.gif", dpi=300):
+        with writer.saving(fig, "Broken lines method.gif", dpi=200):
             plt.plot(xlist, ylist, c='b')
             for i in range(len(x_path)):
                 plt.title(f"{i} iteration")

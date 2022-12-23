@@ -4,7 +4,7 @@ import numpy as np
 from minimizer import Minimizer
 
 class DividingMethod(Minimizer):
-    def __init__(self, delta=1e-10, eps=1e-9, n=900, x_path = []):
+    def __init__(self, delta=1e-10, eps=1e-9, n=900, x_path = [], full_vis=False):
         '''
         Segment dividing optimizer
 
@@ -14,11 +14,13 @@ class DividingMethod(Minimizer):
         eps: minimal distance to minumum, should be less than delta
         n: maximum number of iterations
         x_path: list of pairs [xi - delta/2, xi + delta/2], where xi is a center of the interval on i-th iteration
+        full_vis: make visualization (False as default)
         '''
         self.delta = delta
         self.eps = eps
         self.n = n
         self.x_path = x_path
+        self.full_vis = full_vis
 
     def _dividing_method(self, func, a, b, delta, eps, itera, n, x_path):
         if itera == n:
@@ -53,9 +55,12 @@ class DividingMethod(Minimizer):
         delta = self.delta
         n = self.n
         x_path = self.x_path
+        full_vis = self.full_vis
         assert delta < eps, 'delta should be less than eps'
         x = self._dividing_method(func, a, b, delta, eps, 1, n, x_path)
-        self.visualize_results(func, a, b, x_path)
+        if full_vis:
+            print("Saving visualization", end='\r')
+            self.visualize_results(func, a, b, x_path)
         return x
 
     def visualize_results(self, func, a, b, x_path):
@@ -64,13 +69,13 @@ class DividingMethod(Minimizer):
         
         fig = plt.figure()
         plt.xlim((min(xlist) - 1, max(xlist + 1)))
-        plt.ylim((min(ylist) - 10, max(ylist)))
+        plt.ylim((min(ylist) - 10, max(ylist) + 1))
         l, = plt.plot([], [],  marker="o", markersize=5, c="red")
 
         metadata = dict(title="Movie")
         writer = PillowWriter(fps=2, metadata=metadata)
 
-        with writer.saving(fig, "Dividing method.gif", dpi=300):
+        with writer.saving(fig, "Dividing method.gif", dpi=200):
             plt.plot(xlist, ylist, c='b')
             for i in range(len(x_path)):
                 plt.title(f"{i} iteration")

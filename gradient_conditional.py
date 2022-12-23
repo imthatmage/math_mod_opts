@@ -4,6 +4,7 @@ import random
 import warnings
 from minimizer import Minimizer
 import matplotlib.pyplot as plt
+from tqdm import tqdm
 
 class GradientConditionalMethod(Minimizer):
     def __init__(self, method_name='armicho', n=500, eps=1e-2, print_points=False, 
@@ -214,7 +215,7 @@ class GradientConditionalMethod(Minimizer):
 
             Z = np.zeros((X.shape[0], Y.shape[0]))
 
-            for i in range(X.shape[0]):
+            for i in tqdm(range(X.shape[0])):
                 for j in range(Y.shape[0]):
                     Z[j, i] = self.func([X[i], Y[j]])
             # show path
