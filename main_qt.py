@@ -1,8 +1,10 @@
 import sys
+sys.path.append('optimizers')
 import random
 import string
 import subprocess
 from functools import reduce
+import importlib
 
 import numpy as np
 import matplotlib
@@ -28,6 +30,9 @@ from PyQt6.QtWidgets import (
 
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
+
+
+from optimizers.swarm_method import SwarmMethod
 
 
 class MplCanvas(FigureCanvas):
@@ -95,21 +100,30 @@ class MainWindow(QMainWindow):
 
         # Setup a timer to trigger the redraw by calling update_plot.
         self.timer = QtCore.QTimer()
-        self.timer.setInterval(100)
+        self.timer.setInterval(10)
         self.timer.timeout.connect(self.update_plot)
         # self.timer.start()
         self.timer_started = False 
+
+        # methods init
+        self.optimizer = SwarmMethod(n=10, iterations=1000, tol=0.1)
 
     def draw_n_init_function(self):
         n_args = int(self.ledit_nargs.text())
         f_str = str(self.ledit_func.text())
 
-        func = create_function(f_str, n_args)
 
-        self.x_min = -25
-        self.x_max = 15
-        self.y_min = -20
-        self.y_max = 20
+        self.func = create_function(f_str, n_args)
+
+        x_init = [3, 5]
+
+        self.method_gen = self.optimizer.minimize(self.func, x_init)
+        self.xs, self.x_best, inform = next(self.method_gen)
+
+        self.x_min = self.optimizer.xmin
+        self.x_max = self.optimizer.xmax
+        self.y_min = self.optimizer.ymin
+        self.y_max = self.optimizer.ymax
 
         x_data = np.linspace(self.x_min, self.x_max, 1000)
         y_data = np.linspace(self.y_min, self.y_max, 1000)
@@ -117,9 +131,12 @@ class MainWindow(QMainWindow):
         self.x_data = np.repeat(x_data[None, :], 1000, axis=0)
         self.y_data = np.repeat(y_data[:, None], 1000, axis=1)
 
-        tmp_data = func(self.x_data, self.y_data)
+        tmp_data = self.func(self.x_data, self.y_data)
 
         self.z_data = tmp_data
+
+        self.update_plot()
+        # self.toggle_start_stop()
 
     def update_plot(self):
         # Drop off the first y element, append a new one.
@@ -149,17 +166,27 @@ class MainWindow(QMainWindow):
             self.canvas.axes.figure.colorbar(self.c)
 
             # update time
-            self.iterations = 0
+            self.iterations = -1
             self.canvas.axes.set_title(f"Iterations: {self.iterations}")
         else:
-            self.canvas.axes.set_xticks(np.arange(self.x_min, self.x_max+1, 2))
-            self.canvas.axes.set_yticks(np.arange(self.y_min, self.y_max+1, 2))
+            self.canvas.axes.set_xticks(np.arange(self.x_min, self.x_max+1, 4))
+            self.canvas.axes.set_yticks(np.arange(self.y_min, self.y_max+1, 4))
             self.canvas.axes.imshow(self.z_data, extent=[self.x_min, self.x_max, self.y_min, self.y_max])
             self.c.set_clim(vmin=self.z_data.min(), vmax=self.z_data.max())
 
             # update time
             self.iterations += 1
             self.canvas.axes.set_title(f"Iterations: {self.iterations}")
+
+            self.canvas.axes.scatter(self.xs[:, 0], self.xs[:, 1], color='red')
+            self.canvas.axes.scatter(self.x_best[0], self.x_best[1], color='black')
+
+            self.xs, self.x_best, inform = next(self.method_gen)
+
+            if inform == "END":
+                self.toggle_start_stop()
+            print(self.x_best)
+
 
         # Trigger the canvas to update and redraw.
         self.canvas.draw()
@@ -184,9 +211,10 @@ def create_function(f_str, n_args):
     cmd_str = f"echo \"import numpy as np\n\ndef func({xs}): return {f_str}\" > tmp_function.py"
     subprocess.run(cmd_str, shell=True)
 
-    from tmp_function import func
+    import tmp_function
+    importlib.reload(tmp_function)
 
-    return func
+    return tmp_function.func
 
 
 
