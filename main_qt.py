@@ -85,6 +85,8 @@ class MainWindow(QMainWindow):
         self.ledit_nargs = QLineEdit()
         qf_layout1 = QFormLayout()
         qf_layout1.addRow("nargs", self.ledit_nargs)
+        self.ledit_ndots = QLineEdit()
+        qf_layout1.addRow("ndots", self.ledit_ndots)
         self.vlayout1.addLayout(qf_layout1)
 
         self.vlayout1.addStretch()
@@ -106,12 +108,14 @@ class MainWindow(QMainWindow):
         self.timer_started = False 
 
         # methods init
-        self.optimizer = SwarmMethod(n=10, iterations=1000, tol=0.1)
+        self.optimizer = SwarmMethod(n=10, iterations=1000, tol=0.1, optim='inertia')
 
     def draw_n_init_function(self):
         n_args = int(self.ledit_nargs.text())
         f_str = str(self.ledit_func.text())
 
+        n_dots = int(self.ledit_ndots.text())
+        self.optimizer.n = n_dots
 
         self.func = create_function(f_str, n_args)
 
@@ -126,7 +130,7 @@ class MainWindow(QMainWindow):
         self.y_max = self.optimizer.ymax
 
         x_data = np.linspace(self.x_min, self.x_max, 1000)
-        y_data = np.linspace(self.y_min, self.y_max, 1000)
+        y_data = np.flip(np.linspace(self.y_min, self.y_max, 1000))
 
         self.x_data = np.repeat(x_data[None, :], 1000, axis=0)
         self.y_data = np.repeat(y_data[:, None], 1000, axis=1)
