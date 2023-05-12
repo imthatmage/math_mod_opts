@@ -64,7 +64,7 @@ class SwarmMethod(Minimizer):
             if self.optim == 'classic':
                 vs = vs + self.a*random.random() * (pbest-xs) \
                         + self.b*random.random() * (gbest-xs)
-            elif self.optim == 'inertia':
+            elif self.optim == 'inertial':
                 vs = weights[itera]*vs + self.a*random.random() * (pbest-xs) \
                         + self.b*random.random() * (gbest-xs)
 
