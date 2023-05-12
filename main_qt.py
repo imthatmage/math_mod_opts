@@ -119,7 +119,6 @@ class MainWindow(QMainWindow):
         n_args = int(self.ledit_nargs.text())
         f_str = str(self.ledit_func.text())
         method = str(self.combox_optim.currentText())
-        print(method)
 
         n_dots = int(self.ledit_ndots.text())
         self.optimizer.n = n_dots
@@ -219,22 +218,14 @@ def create_function(f_str, n_args):
 
     for tmp_func in vocabulary:
         f_str = f_str.replace(tmp_func, f'np.{tmp_func}')
-
-    # create function for linux
-    # cmd_str = f"echo \"import numpy as np\n\ndef func({xs}): return {f_str}\" > tmp_function.py"
-    # subprocess.run(cmd_str, shell=True)
     
-    # create function for windows
     with open("tmp_function.py", "w") as f:
         f.write("import numpy as np\n\ndef func({}): return {}".format(xs, f_str))
-
 
     import tmp_function
     importlib.reload(tmp_function)
 
     return tmp_function.func
-
-
 
 
 app = QApplication(sys.argv)
