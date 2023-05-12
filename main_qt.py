@@ -25,6 +25,7 @@ from PyQt6.QtWidgets import (
     QPushButton,
     QVBoxLayout,
     QHBoxLayout,
+    QComboBox
 )
 
 
@@ -87,8 +88,12 @@ class MainWindow(QMainWindow):
         qf_layout1.addRow("nargs", self.ledit_nargs)
         self.ledit_ndots = QLineEdit()
         qf_layout1.addRow("ndots", self.ledit_ndots)
+        
+        self.combox_optim = QComboBox(self)
+        self.combox_optim.addItems(["classic", "inertial"])
+        qf_layout1.addRow("optim", self.combox_optim)
         self.vlayout1.addLayout(qf_layout1)
-
+        
         self.vlayout1.addStretch()
 
         # self.setCentralWidget(self.canvas)
@@ -108,15 +113,18 @@ class MainWindow(QMainWindow):
         self.timer_started = False 
 
         # methods init
-        self.optimizer = SwarmMethod(n=10, iterations=1000, tol=0.1, optim='inertia')
+        self.optimizer = SwarmMethod(n=10, iterations=1000, tol=0.1)
 
     def draw_n_init_function(self):
         n_args = int(self.ledit_nargs.text())
         f_str = str(self.ledit_func.text())
+        method = str(self.combox_optim.currentText())
+        print(method)
 
         n_dots = int(self.ledit_ndots.text())
         self.optimizer.n = n_dots
-
+        self.optimizer.optim = method
+        
         self.func = create_function(f_str, n_args)
 
         x_init = [3, 5]
@@ -212,8 +220,14 @@ def create_function(f_str, n_args):
     for tmp_func in vocabulary:
         f_str = f_str.replace(tmp_func, f'np.{tmp_func}')
 
-    cmd_str = f"echo \"import numpy as np\n\ndef func({xs}): return {f_str}\" > tmp_function.py"
-    subprocess.run(cmd_str, shell=True)
+    # create function for linux
+    # cmd_str = f"echo \"import numpy as np\n\ndef func({xs}): return {f_str}\" > tmp_function.py"
+    # subprocess.run(cmd_str, shell=True)
+    
+    # create function for windows
+    with open("tmp_function.py", "w") as f:
+        f.write("import numpy as np\n\ndef func({}): return {}".format(xs, f_str))
+
 
     import tmp_function
     importlib.reload(tmp_function)
