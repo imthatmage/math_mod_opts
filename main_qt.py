@@ -49,7 +49,7 @@ class MainWindow(QMainWindow):
 
     def __init__(self, *args, **kwargs):
         super().__init__()
-        self.setFixedSize(1024, 768)
+        self.setFixedSize(1030, 768)
 
         self.hlayout = QHBoxLayout()
 
@@ -58,6 +58,9 @@ class MainWindow(QMainWindow):
 
         self.hlayout.addLayout(self.vlayout0)
         self.hlayout.addLayout(self.vlayout1)
+
+        # methods init
+        self.optimizer = SwarmMethod(n=10, iterations=1000, tol=0.1)
 
         # vlayout0 init
         width, height= 12, 12
@@ -70,8 +73,6 @@ class MainWindow(QMainWindow):
         qf_layout0 = QFormLayout()
         qf_layout0.addRow("function", self.ledit_func)
         self.vlayout0.addLayout(qf_layout0)
-        
-        
 
         # vlayout1 init
         self.vlayout1.addStretch()
@@ -85,12 +86,43 @@ class MainWindow(QMainWindow):
 
         self.ledit_nargs = QLineEdit()
         qf_layout1 = QFormLayout()
-        qf_layout1.addRow("nargs", self.ledit_nargs)
+        qf_layout1.addRow("n args", self.ledit_nargs)
+        self.ledit_nargs.setText("2")
+        
         self.ledit_ndots = QLineEdit()
-        qf_layout1.addRow("ndots", self.ledit_ndots)
+        qf_layout1.addRow("n dots", self.ledit_ndots)
+        self.ledit_ndots.setText(str(self.optimizer.n))
+        
+        self.ledit_iter = QLineEdit()
+        qf_layout1.addRow("n iterations", self.ledit_iter)
+        self.ledit_iter.setText(str(self.optimizer.iterations))
+        
+        self.ledit_x = QLineEdit()
+        qf_layout1.addRow("x init", self.ledit_x)
+        self.ledit_x.setText('0.0, 0.0')
+        
+        self.ledit_a = QLineEdit()
+        qf_layout1.addRow("a init", self.ledit_a)
+        self.ledit_a.setText(str(self.optimizer.a))
+        
+        self.ledit_b = QLineEdit()
+        qf_layout1.addRow("b init", self.ledit_b)
+        self.ledit_b.setText(str(self.optimizer.b))
+        
+        self.ledit_shift_x = QLineEdit()
+        qf_layout1.addRow("shift x", self.ledit_shift_x)
+        self.ledit_shift_x.setText(str(self.optimizer.shift_x))
+        
+        self.ledit_shift_y = QLineEdit()
+        qf_layout1.addRow("shift y", self.ledit_shift_y)
+        self.ledit_shift_y.setText(str(self.optimizer.shift_y))
+        
+        self.ledit_tol = QLineEdit()
+        qf_layout1.addRow("tolerance", self.ledit_tol)
+        self.ledit_tol.setText(str(self.optimizer.tol))
         
         self.combox_optim = QComboBox(self)
-        self.combox_optim.addItems(["classic", "inertial"])
+        self.combox_optim.addItems(["classic", "inertia"])
         qf_layout1.addRow("optim", self.combox_optim)
         self.vlayout1.addLayout(qf_layout1)
         
@@ -111,22 +143,32 @@ class MainWindow(QMainWindow):
         self.timer.timeout.connect(self.update_plot)
         # self.timer.start()
         self.timer_started = False 
-
-        # methods init
-        self.optimizer = SwarmMethod(n=10, iterations=1000, tol=0.1)
+        
 
     def draw_n_init_function(self):
         n_args = int(self.ledit_nargs.text())
         f_str = str(self.ledit_func.text())
+        n_dots = int(self.ledit_ndots.text())
+        n_iterations = int(self.ledit_iter.text())
+        init_a = float(self.ledit_a.text())
+        init_b = float(self.ledit_b.text())
+        shift_x = float(self.ledit_shift_x.text())
+        shift_y = float(self.ledit_shift_y.text())
+        tolerance = float(self.ledit_tol.text())
         method = str(self.combox_optim.currentText())
 
-        n_dots = int(self.ledit_ndots.text())
         self.optimizer.n = n_dots
+        self.optimizer.iterations = n_iterations
+        self.optimizer.a = init_a
+        self.optimizer.b = init_b
+        self.optimizer.shift_x = shift_x
+        self.optimizer.shift_y = shift_y    
+        self.optimizer.tol = tolerance  
         self.optimizer.optim = method
         
         self.func = create_function(f_str, n_args)
 
-        x_init = [3, 5]
+        x_init = list(map(float, self.ledit_x.text().split(", ")))
 
         self.method_gen = self.optimizer.minimize(self.func, x_init)
         self.xs, self.x_best, inform = next(self.method_gen)

@@ -2,13 +2,14 @@ import sys
 import random
 import warnings
 from math import ceil
+import quantumrandom as qr
 
 import numpy as np
 from minimizer import Minimizer
 
 
 class SwarmMethod(Minimizer):
-    def __init__(self, n=100, a=0.01, b=0.01, iterations=500, tol=1e-4, optim='classic'):
+    def __init__(self, n=100, a=0.9, b=0.1, iterations=500, tol=1e-4, optim='classic', shift_x=15, shift_y=15):
         '''
         Swarm Optimizer:
 
@@ -23,6 +24,8 @@ class SwarmMethod(Minimizer):
         self.tol = tol
         self.itera_thresh = ceil(self.iterations*0.05) + 1
         self.optim = optim
+        self.shift_x = shift_x
+        self.shift_y = shift_y
     def minimize(self, func, x0):
         '''
         Swarm method
@@ -33,13 +36,11 @@ class SwarmMethod(Minimizer):
         x0: first approximation point
         '''
 
-        shift = 15
+        self.xmin = x0[0] - self.shift_x
+        self.xmax = x0[0] + self.shift_x
 
-        self.xmin = x0[0] - shift
-        self.xmax = x0[0] + shift
-
-        self.ymin = x0[1] - shift
-        self.ymax = x0[1] + shift
+        self.ymin = x0[1] - self.shift_y
+        self.ymax = x0[1] + self.shift_y
         
         xs = np.random.uniform([self.xmin, self.ymin], [self.xmax, self.ymax], (self.n, 2))
 
@@ -64,9 +65,9 @@ class SwarmMethod(Minimizer):
             if self.optim == 'classic':
                 vs = vs + self.a*random.random() * (pbest-xs) \
                         + self.b*random.random() * (gbest-xs)
-            elif self.optim == 'inertial':
+            elif self.optim == 'inertia':
                 vs = weights[itera]*vs + self.a*random.random() * (pbest-xs) \
-                        + self.b*random.random() * (gbest-xs)
+                        + self.b*random.random() * (gbest-xs) 
 
             xs = xs + vs
 
