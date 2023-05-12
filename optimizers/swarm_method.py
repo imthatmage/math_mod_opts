@@ -8,7 +8,7 @@ from minimizer import Minimizer
 
 
 class SwarmMethod(Minimizer):
-    def __init__(self, n=100, a=0.01, b=0.01, iterations=500, tol=1e-4):
+    def __init__(self, n=100, a=0.01, b=0.01, iterations=500, tol=1e-4, optim='classic'):
         '''
         Swarm Optimizer:
 
@@ -22,6 +22,7 @@ class SwarmMethod(Minimizer):
         self.b = b
         self.tol = tol
         self.itera_thresh = ceil(self.iterations*0.05) + 1
+        self.optim = optim
     def minimize(self, func, x0):
         '''
         Swarm method
@@ -32,11 +33,13 @@ class SwarmMethod(Minimizer):
         x0: first approximation point
         '''
 
-        self.xmin = x0[0] - 10*x0[0]
-        self.xmax = x0[0] + 10*x0[0]
+        shift = 15
 
-        self.ymin = x0[1] - 10*x0[1]
-        self.ymax = x0[1] + 10*x0[1]
+        self.xmin = x0[0] - shift
+        self.xmax = x0[0] + shift
+
+        self.ymin = x0[1] - shift
+        self.ymax = x0[1] + shift
         
         xs = np.random.uniform([self.xmin, self.ymin], [self.xmax, self.ymax], (self.n, 2))
 
@@ -54,10 +57,16 @@ class SwarmMethod(Minimizer):
         dntch_count = 0
 
         yield xs, gbest, 'OK'
+
+        weights = np.flip(np.linspace(0, 1, self.iterations))
         
         while itera != self.iterations:
-            vs = vs + self.a*random.random() * (pbest-xs) \
-                    + self.b*random.random() * (gbest-xs)
+            if self.optim == 'classic':
+                vs = vs + self.a*random.random() * (pbest-xs) \
+                        + self.b*random.random() * (gbest-xs)
+            elif self.optim == 'inertia':
+                vs = weights[itera]*vs + self.a*random.random() * (pbest-xs) \
+                        + self.b*random.random() * (gbest-xs)
 
             xs = xs + vs
 
