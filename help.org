@@ -1,0 +1,5 @@
+* TODOS
+** TODO x_init field
+** TODO optim name listbox
+** TODO max iteration field
+** TODO tolerance field
