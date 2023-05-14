@@ -97,6 +97,10 @@ class MainWindow(QMainWindow):
         qf_layout1.addRow("n iterations", self.ledit_iter)
         self.ledit_iter.setText(str(self.optimizer.iterations))
         
+        self.ledit_iter_thr = QLineEdit()
+        qf_layout1.addRow("itera_thresh", self.ledit_iter_thr)
+        self.ledit_iter_thr.setText(str(self.optimizer.itera_thresh))
+
         self.ledit_x = QLineEdit()
         qf_layout1.addRow("x init", self.ledit_x)
         self.ledit_x.setText('0.0, 0.0')
@@ -122,7 +126,7 @@ class MainWindow(QMainWindow):
         self.ledit_tol.setText(str(self.optimizer.tol))
         
         self.combox_optim = QComboBox(self)
-        self.combox_optim.addItems(["classic", "inertia"])
+        self.combox_optim.addItems(["classic", "inertia", "annealing", "extinction"])
         qf_layout1.addRow("optim", self.combox_optim)
         self.vlayout1.addLayout(qf_layout1)
         
@@ -150,6 +154,7 @@ class MainWindow(QMainWindow):
         f_str = str(self.ledit_func.text())
         n_dots = int(self.ledit_ndots.text())
         n_iterations = int(self.ledit_iter.text())
+        itera_thresh = int(self.ledit_iter_thr.text())
         init_a = float(self.ledit_a.text())
         init_b = float(self.ledit_b.text())
         shift_x = float(self.ledit_shift_x.text())
@@ -158,7 +163,9 @@ class MainWindow(QMainWindow):
         method = str(self.combox_optim.currentText())
 
         self.optimizer.n = n_dots
+        self.optimizer.n_args = n_args
         self.optimizer.iterations = n_iterations
+        self.optimizer.itera_thresh = itera_thresh
         self.optimizer.a = init_a
         self.optimizer.b = init_b
         self.optimizer.shift_x = shift_x
@@ -219,7 +226,7 @@ class MainWindow(QMainWindow):
             self.canvas.axes.figure.colorbar(self.c)
 
             # update time
-            self.iterations = -1
+            self.iterations = 0 
             self.canvas.axes.set_title(f"Iterations: {self.iterations}")
         else:
             self.canvas.axes.set_xticks(np.arange(self.x_min, self.x_max+1, 4))
@@ -228,8 +235,9 @@ class MainWindow(QMainWindow):
             self.c.set_clim(vmin=self.z_data.min(), vmax=self.z_data.max())
 
             # update time
-            self.iterations += 1
             self.canvas.axes.set_title(f"Iterations: {self.iterations}")
+            self.iterations += 1
+            self.ledit_ndots.setText(str(self.optimizer.n))
 
             self.canvas.axes.scatter(self.xs[:, 0], self.xs[:, 1], color='red')
             self.canvas.axes.scatter(self.x_best[0], self.x_best[1], color='black')
