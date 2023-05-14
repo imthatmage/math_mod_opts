@@ -1,17 +1,12 @@
 import sys
 sys.path.append('optimizers')
-import random
 import string
-import subprocess
 from functools import reduce
 import importlib
 
 import numpy as np
 import matplotlib
 matplotlib.use('Qt5Agg')
-
-from sympy import symbols, lambdify
-from sympy.parsing.sympy_parser import parse_expr
 
 from PyQt6 import QtCore, QtWidgets
 
