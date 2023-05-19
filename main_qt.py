@@ -55,7 +55,7 @@ class MainWindow(QMainWindow):
         self.hlayout.addLayout(self.vlayout1)
 
         # methods init
-        self.optimizer = SwarmMethod(n=10, iterations=1000, tol=0.1)
+        self.optimizer = SwarmMethod(n=30, iterations=1000, tol=0.1)
 
         # vlayout0 init
         width, height= 12, 12
@@ -121,7 +121,7 @@ class MainWindow(QMainWindow):
         self.ledit_tol.setText(str(self.optimizer.tol))
         
         self.combox_optim = QComboBox(self)
-        self.combox_optim.addItems(["classic", "inertia", "annealing", "extinction"])
+        self.combox_optim.addItems(["classic", "inertia", "annealing", "extinction", "evolution"])
         qf_layout1.addRow("optim", self.combox_optim)
         self.vlayout1.addLayout(qf_layout1)
         
@@ -138,7 +138,7 @@ class MainWindow(QMainWindow):
 
         # Setup a timer to trigger the redraw by calling update_plot.
         self.timer = QtCore.QTimer()
-        self.timer.setInterval(10)
+        self.timer.setInterval(50)
         self.timer.timeout.connect(self.update_plot)
         # self.timer.start()
         self.timer_started = False 
@@ -241,7 +241,7 @@ class MainWindow(QMainWindow):
 
             if inform == "END":
                 self.toggle_start_stop()
-            print(self.x_best)
+            print(self.x_best, self.func(*self.x_best))
 
 
         # Trigger the canvas to update and redraw.

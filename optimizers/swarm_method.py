@@ -8,7 +8,9 @@ from minimizer import Minimizer
 
 
 class SwarmMethod(Minimizer):
-    def __init__(self, n=100, n_args=2, a=0.9, b=0.1, iterations=500, itera_thresh=None, tol=1e-4, optim='classic', shift_x=15, shift_y=15):
+    def __init__(self, n=100, n_args=2, a=0.9, b=0.1, iterations=500, 
+                 itera_thresh=None, tol=1e-4, 
+                 optim='classic', shift_x=45, shift_y=45):
         '''
         Swarm Optimizer:
 
@@ -23,7 +25,7 @@ class SwarmMethod(Minimizer):
         self.b = b
         self.tol = tol
         self.itera_thresh = ceil(self.iterations*0.05)+1 if itera_thresh is None else itera_thresh
-        self.extinction_thresh = self.itera_thresh//5
+        self.mutation_thresh = self.itera_thresh//5
         self.optim = optim
         self.shift_x = shift_x
         self.shift_y = shift_y
@@ -52,7 +54,7 @@ class SwarmMethod(Minimizer):
         gbest = xs[np.argmin(fs)]
         fgbest = func(*gbest)
 
-        vs = np.random.uniform(0, 1, (self.n, self.n_args))
+        vs = np.random.uniform(-1, 1, (self.n, self.n_args))
 
         itera = 0
         dntch_count = 0
@@ -72,6 +74,9 @@ class SwarmMethod(Minimizer):
                 vs = vs + self.a*random.random() * (pbest-xs) \
                         + self.b*random.random() * (gbest-xs) 
             elif self.optim == 'extinction':
+                vs = vs + self.a*random.random() * (pbest-xs) \
+                        + self.b*random.random() * (gbest-xs) 
+            elif self.optim == 'evolution':
                 vs = vs + self.a*random.random() * (pbest-xs) \
                         + self.b*random.random() * (gbest-xs) 
 
@@ -101,13 +106,36 @@ class SwarmMethod(Minimizer):
                 gbest = pbest[best_index]
                 fgbest = func(*gbest)
             elif self.optim == 'extinction':
-                if itera % self.extinction_thresh == 0:
-                    f_thresh = np.percentile(fpbest, 75)
+                if itera % self.mutation_thresh == 0:
+                    f_thresh = np.percentile(fpbest, 90)
                     mask = fpbest_new <= f_thresh
                     self.n = mask.sum()
-                    pbest = pbest_new[np.repeat(mask[:, None], self.n_args, axis=1)].reshape(self.n, self.n_args)
-                    xs = xs[np.repeat(mask[:, None], self.n_args, axis=1)].reshape(self.n, self.n_args)
-                    vs = vs[np.repeat(mask[:, None], self.n_args, axis=1)].reshape(self.n, self.n_args)
+                    pbest = pbest_new[np.repeat(mask[:, None], self.n_args, axis=1)] \
+                            .reshape(self.n, self.n_args)
+                    xs = xs[np.repeat(mask[:, None], self.n_args, axis=1)] \
+                            .reshape(self.n, self.n_args)
+                    vs = vs[np.repeat(mask[:, None], self.n_args, axis=1)] \
+                            .reshape(self.n, self.n_args)
+                    fpbest = func(*pbest.T)
+                else:
+                    pbest = pbest_new
+                    fpbest = fpbest_new
+                gbest = gbest_new
+                fgbest = fgbest_new
+            elif self.optim == 'evolution':
+                if itera % self.mutation_thresh == 0:
+                    f_thresh = np.percentile(fpbest, 90)
+                    mask = fpbest_new <= f_thresh
+                    tmp_n = mask.sum()
+                    top_pbest = pbest_new[np.repeat(mask[:, None], self.n_args, axis=1)] \
+                            .reshape(tmp_n, self.n_args)
+                    rand_indices = np.random.randint(tmp_n, size=self.n-tmp_n)
+                    pbest[np.repeat(np.logical_not(mask[:, None]), \
+                            self.n_args, axis=1)] = top_pbest[rand_indices].reshape(-1)
+                    xs[np.repeat(np.logical_not(mask[:, None]), \
+                            self.n_args, axis=1)] = top_pbest[rand_indices].reshape(-1)
+                    vs[np.repeat(np.logical_not(mask[:, None]), \
+                                    self.n_args, axis=1)] = np.random.uniform(-1, 1, ((self.n-tmp_n)*self.n_args))
                     fpbest = func(*pbest.T)
                 else:
                     pbest = pbest_new
