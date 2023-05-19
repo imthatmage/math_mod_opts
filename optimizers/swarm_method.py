@@ -8,9 +8,9 @@ from minimizer import Minimizer
 
 
 class SwarmMethod(Minimizer):
-    def __init__(self, n=100, n_args=2, a=0.9, b=0.1, iterations=500, 
+    def __init__(self, n=100, n_args=2, a=0.1, b=0.1, iterations=500, 
                  itera_thresh=None, tol=1e-4, 
-                 optim='classic', shift_x=45, shift_y=45):
+                 optim='classic', options=[], shift_x=45, shift_y=45):
         '''
         Swarm Optimizer:
 
@@ -27,6 +27,7 @@ class SwarmMethod(Minimizer):
         self.itera_thresh = ceil(self.iterations*0.05)+1 if itera_thresh is None else itera_thresh
         self.mutation_thresh = self.itera_thresh//5
         self.optim = optim
+        self.options = options
         self.shift_x = shift_x
         self.shift_y = shift_y
     def minimize(self, func, x0):
@@ -62,23 +63,26 @@ class SwarmMethod(Minimizer):
         yield xs, gbest, 'OK'
 
         weights = np.flip(np.linspace(0, 1, self.iterations))
+        self.fgbest_list = []
         
         while itera != self.iterations:
+            if "inertia" in self.options:
+                w = weights[itera]
+            else:
+                w = 1
+            
             if self.optim == 'classic':
-                vs = vs + self.a*random.random() * (pbest-xs) \
-                        + self.b*random.random() * (gbest-xs)
-            elif self.optim == 'inertia':
-                vs = weights[itera]*vs + self.a*random.random() * (pbest-xs) \
-                        + self.b*random.random() * (gbest-xs) 
+                vs = w*vs + self.a*random.random() * (pbest-xs) \
+                          + self.b*random.random() * (gbest-xs)
             elif self.optim == 'annealing':
-                vs = vs + self.a*random.random() * (pbest-xs) \
-                        + self.b*random.random() * (gbest-xs) 
+                vs = w*vs + self.a*random.random() * (pbest-xs) \
+                          + self.b*random.random() * (gbest-xs) 
             elif self.optim == 'extinction':
-                vs = vs + self.a*random.random() * (pbest-xs) \
-                        + self.b*random.random() * (gbest-xs) 
+                vs = w*vs + self.a*random.random() * (pbest-xs) \
+                          + self.b*random.random() * (gbest-xs)
             elif self.optim == 'evolution':
-                vs = vs + self.a*random.random() * (pbest-xs) \
-                        + self.b*random.random() * (gbest-xs) 
+                vs = w*vs + self.a*random.random() * (pbest-xs) \
+                          + self.b*random.random() * (gbest-xs)
 
             xs = xs + vs
 
@@ -103,8 +107,9 @@ class SwarmMethod(Minimizer):
                         [(best_indices, np.arange(len(xs)))]
                 fpbest = func(*pbest.T)
                 best_index = np.argmin(fpbest)
-                gbest = pbest[best_index]
-                fgbest = func(*gbest)
+                gbest_new = pbest[best_index]
+                fgbest_new = func(*gbest)
+                
             elif self.optim == 'extinction':
                 if itera % self.mutation_thresh == 0:
                     f_thresh = np.percentile(fpbest, 90)
@@ -120,8 +125,9 @@ class SwarmMethod(Minimizer):
                 else:
                     pbest = pbest_new
                     fpbest = fpbest_new
-                gbest = gbest_new
-                fgbest = fgbest_new
+                # gbest = gbest_new
+                # fgbest = fgbest_new
+                # 
             elif self.optim == 'evolution':
                 if itera % self.mutation_thresh == 0:
                     f_thresh = np.percentile(fpbest, 90)
@@ -140,24 +146,25 @@ class SwarmMethod(Minimizer):
                 else:
                     pbest = pbest_new
                     fpbest = fpbest_new
-                gbest = gbest_new
-                fgbest = fgbest_new
+                # gbest = gbest_new
+                # fgbest = fgbest_new
+                
             else:
                 pbest = pbest_new
                 fpbest = fpbest_new
-                gbest = gbest_new
-                fgbest = fgbest_new
 
             if abs(fgbest - fgbest_new) < self.tol:
                 dntch_count += 1
             else:
                 dntch_count = 0
             if dntch_count > self.itera_thresh:
-                print(f"Global minimum does not change for {self.itera_thresh} iterations")
+                print(f"Global minimum does not change for {dntch_count} iterations")
                 print(f"Stopped at {itera} epoch")
                 break
-
+            gbest = gbest_new
             fgbest = fgbest_new
+            self.fgbest_list.append(fgbest)
+            
 
             yield xs, gbest, "OK"
 
