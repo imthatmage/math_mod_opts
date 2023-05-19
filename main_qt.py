@@ -20,7 +20,10 @@ from PyQt6.QtWidgets import (
     QPushButton,
     QVBoxLayout,
     QHBoxLayout,
-    QComboBox
+    QComboBox,
+    QCheckBox,
+    QGroupBox,
+    QToolBar
 )
 
 
@@ -32,7 +35,7 @@ from optimizers.swarm_method import SwarmMethod
 
 
 class MplCanvas(FigureCanvas):
-
+    
     def __init__(self, parent=None, fig=None, width=5, height=4, dpi=100):
         self.axes = fig.add_subplot(111)
         super(MplCanvas, self).__init__(fig)
@@ -44,7 +47,7 @@ class MainWindow(QMainWindow):
 
     def __init__(self, *args, **kwargs):
         super().__init__()
-        self.setFixedSize(1030, 768)
+        self.setFixedSize(1033, 768)
 
         self.hlayout = QHBoxLayout()
 
@@ -55,7 +58,7 @@ class MainWindow(QMainWindow):
         self.hlayout.addLayout(self.vlayout1)
 
         # methods init
-        self.optimizer = SwarmMethod(n=30, iterations=1000, tol=0.1)
+        self.optimizer = SwarmMethod(n=30, iterations=1000, tol=0.01)
 
         # vlayout0 init
         width, height= 12, 12
@@ -119,13 +122,34 @@ class MainWindow(QMainWindow):
         self.ledit_tol = QLineEdit()
         qf_layout1.addRow("tolerance", self.ledit_tol)
         self.ledit_tol.setText(str(self.optimizer.tol))
-        
-        self.combox_optim = QComboBox(self)
-        self.combox_optim.addItems(["classic", "inertia", "annealing", "extinction", "evolution"])
-        qf_layout1.addRow("optim", self.combox_optim)
         self.vlayout1.addLayout(qf_layout1)
         
+        self.gbox = QGroupBox("")
+        self.vlayout1.addWidget(self.gbox)        
+        self.vbox = QVBoxLayout()
+        self.gbox.setLayout(self.vbox)
+        
+        self.cbox_inertia = QCheckBox("Inertia")
+        self.cbox_inertia.setChecked(False)
+        self.cbox_inertia.stateChanged.connect(self.click_box)
+        self.vbox.addWidget(self.cbox_inertia)
+        
+        self.combox_optim = QComboBox(self)
+        self.combox_optim.addItems(["classic", "annealing", "extinction", "evolution"])
+        self.vbox.addWidget(self.combox_optim)
+        
+        # toolbar init
+        self.toolbar = QToolBar("Main toolbar")
+        self.addToolBar(self.toolbar)
+        
+        self.button_act = QPushButton("Change plot", self)
+        self.button_act.setStatusTip("Change plot button")
+        self.button_act.clicked.connect(self.change_plot)
+        self.toolbar.addWidget(self.button_act)
+        
         self.vlayout1.addStretch()
+
+        self.graph_name = "main"
 
         # self.setCentralWidget(self.canvas)
         centralWidget = QWidget(self)
@@ -138,11 +162,16 @@ class MainWindow(QMainWindow):
 
         # Setup a timer to trigger the redraw by calling update_plot.
         self.timer = QtCore.QTimer()
-        self.timer.setInterval(50)
+        self.timer.setInterval(100)
         self.timer.timeout.connect(self.update_plot)
         # self.timer.start()
         self.timer_started = False 
-        
+    
+    def click_box(self):
+        if self.cbox_inertia.isChecked():
+            self.optimizer.options.append("inertia")
+        else:
+            self.optimizer.options.remove("inertia")
 
     def draw_n_init_function(self):
         n_args = int(self.ledit_nargs.text())
@@ -203,50 +232,71 @@ class MainWindow(QMainWindow):
 
         self.canvas.axes.cla()  # Clear the canvas.
 
-        if self.z_data is None:
-            self.x_min = -25
-            self.x_max = 15
-            self.y_min = -20
-            self.y_max = 20
+        if self.graph_name == "main":
+            if self.z_data is None:
+                self.x_min = -25
+                self.x_max = 15
+                self.y_min = -20
+                self.y_max = 20
 
-            x_data = np.linspace(self.x_min, self.x_max, 1000)
-            y_data = np.linspace(self.y_min, self.y_max, 1000)
+                x_data = np.linspace(self.x_min, self.x_max, 1000)
+                y_data = np.linspace(self.y_min, self.y_max, 1000)
 
-            self.x_data = np.repeat(x_data[None, :], 1000, axis=0)
-            self.y_data = np.repeat(y_data[:, None], 1000, axis=1)
-            self.z_data = np.ones((1000, 1000))
+                self.x_data = np.repeat(x_data[None, :], 1000, axis=0)
+                self.y_data = np.repeat(y_data[:, None], 1000, axis=1)
+                self.z_data = np.ones((1000, 1000))
 
-            # self.canvas.axes.imshow(self.z_data)
-            self.c = self.canvas.axes.pcolormesh(self.x_data, self.y_data, self.z_data, cmap='viridis')
-            self.canvas.axes.figure.colorbar(self.c)
+                # self.canvas.axes.imshow(self.z_data)
+                self.c = self.canvas.axes.pcolormesh(self.x_data, self.y_data, self.z_data, cmap='viridis')
+                self.canvas.axes.figure.colorbar(self.c)
 
-            # update time
-            self.iterations = 0 
-            self.canvas.axes.set_title(f"Iterations: {self.iterations}")
+                # update time
+                self.iterations = 0 
+                self.canvas.axes.set_title(f"Iterations: {self.iterations}")
+            else:
+                self.canvas.axes.set_xticks(np.arange(self.x_min, self.x_max+1, 4))
+                self.canvas.axes.set_yticks(np.arange(self.y_min, self.y_max+1, 4))
+                self.canvas.axes.imshow(self.z_data, extent=[self.x_min, self.x_max, self.y_min, self.y_max])
+                self.c.set_clim(vmin=self.z_data.min(), vmax=self.z_data.max())
+
+                # update time
+                self.canvas.axes.set_title(f"Iterations: {self.iterations}")
+                self.iterations += 1
+                self.ledit_ndots.setText(str(self.optimizer.n))
+
+                self.canvas.axes.scatter(self.xs[:, 0], self.xs[:, 1], color='red')
+                self.canvas.axes.scatter(self.x_best[0], self.x_best[1], color='black')
+
+                self.xs, self.x_best, inform = next(self.method_gen)
+
+                if inform == "END":
+                    self.toggle_start_stop()
+                print(self.x_best, self.func(*self.x_best))
         else:
-            self.canvas.axes.set_xticks(np.arange(self.x_min, self.x_max+1, 4))
-            self.canvas.axes.set_yticks(np.arange(self.y_min, self.y_max+1, 4))
-            self.canvas.axes.imshow(self.z_data, extent=[self.x_min, self.x_max, self.y_min, self.y_max])
-            self.c.set_clim(vmin=self.z_data.min(), vmax=self.z_data.max())
-
-            # update time
-            self.canvas.axes.set_title(f"Iterations: {self.iterations}")
+            #self.canvas.axes.plot( color='green')
+            self.canvas.axes.plot(np.arange(len(self.optimizer.fgbest_list)), self.optimizer.fgbest_list, color='green')
+            
+            self.canvas.axes.set_title("Global best path")
             self.iterations += 1
             self.ledit_ndots.setText(str(self.optimizer.n))
-
-            self.canvas.axes.scatter(self.xs[:, 0], self.xs[:, 1], color='red')
-            self.canvas.axes.scatter(self.x_best[0], self.x_best[1], color='black')
-
+            
             self.xs, self.x_best, inform = next(self.method_gen)
 
             if inform == "END":
                 self.toggle_start_stop()
             print(self.x_best, self.func(*self.x_best))
-
-
+        
         # Trigger the canvas to update and redraw.
         self.canvas.draw()
-        
+      
+    def change_plot(self):
+        if self.graph_name == "main":
+            self.graph_name = "not_main"
+            self.update_plot()
+        else:
+            self.graph_name = "main"
+            self.update_plot()
+          
     def toggle_start_stop(self):
         if self.timer_started:
             self.timer.stop()
