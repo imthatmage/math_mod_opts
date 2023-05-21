@@ -30,6 +30,9 @@ class SwarmMethod(Minimizer):
         self.options = options
         self.shift_x = shift_x
         self.shift_y = shift_y
+        self.itera = 0
+        self.eps_x = 2
+        self.eps_y = 2
     def minimize(self, func, x0):
         '''
         Swarm method
@@ -57,17 +60,19 @@ class SwarmMethod(Minimizer):
 
         vs = np.random.uniform(-1, 1, (self.n, self.n_args))
 
-        itera = 0
         dntch_count = 0
+
+        # genetic
+        reel = 1500
 
         yield xs, gbest, 'OK'
 
         weights = np.flip(np.linspace(0, 1, self.iterations))
         self.fgbest_list = []
         
-        while itera != self.iterations:
+        while self.itera != self.iterations:
             if "inertia" in self.options:
-                w = weights[itera]
+                w = weights[self.itera]
             else:
                 w = 1
             
@@ -83,8 +88,21 @@ class SwarmMethod(Minimizer):
             elif self.optim == 'evolution':
                 vs = w*vs + self.a*random.random() * (pbest-xs) \
                           + self.b*random.random() * (gbest-xs)
+            elif self.optim == 'genetic':
+                vs = w*vs + self.a*random.random() * (pbest-xs) \
+                          + self.b*random.random() * (gbest-xs)
 
-            xs = xs + vs
+            if 'reflection' in self.options:
+                xs = xs + vs
+                extend_indices = np.where((xs[:, 0] < self.xmin+self.eps_x) | (xs[:, 0] > self.xmax-self.eps_x))[0]
+                vs[extend_indices, 0] = -vs[extend_indices, 0]
+
+                extend_indices = np.where((xs[:, 1] < self.ymin+self.eps_y) | (xs[:, 1] > self.ymax-self.eps_y))[0]
+                vs[extend_indices, 1] = -vs[extend_indices, 1] 
+
+                xs = xs + vs
+            else:
+                xs = xs + vs
 
             fs = func(*xs.T)
             best_indices = np.argmin(np.vstack((fpbest, fs)), axis=0)
@@ -97,21 +115,21 @@ class SwarmMethod(Minimizer):
             gbest_new = pbest_new[best_index]
             fgbest_new = func(*gbest_new)
 
-            itera += 1
+            self.itera += 1
 
             if self.optim == 'annealing':
                 E = np.exp(-(fpbest_new-fgbest) / fpbest_new)
-                tau = random.random()*((self.iterations - itera) / self.iterations)
+                tau = random.random()*((self.iterations - self.itera) / self.iterations)
                 best_indices = (E > tau).astype('int32')
                 pbest = np.concatenate((pbest[None], pbest_new[None]), axis=0) \
                         [(best_indices, np.arange(len(xs)))]
                 fpbest = func(*pbest.T)
                 best_index = np.argmin(fpbest)
                 gbest_new = pbest[best_index]
-                fgbest_new = func(*gbest)
+                fgbest_new = func(*gbest_new)
                 
             elif self.optim == 'extinction':
-                if itera % self.mutation_thresh == 0:
+                if self.itera % self.mutation_thresh == 0:
                     f_thresh = np.percentile(fpbest, 90)
                     mask = fpbest_new <= f_thresh
                     self.n = mask.sum()
@@ -129,7 +147,7 @@ class SwarmMethod(Minimizer):
                 # fgbest = fgbest_new
                 # 
             elif self.optim == 'evolution':
-                if itera % self.mutation_thresh == 0:
+                if self.itera % self.mutation_thresh == 0:
                     f_thresh = np.percentile(fpbest, 90)
                     mask = fpbest_new <= f_thresh
                     tmp_n = mask.sum()
@@ -148,7 +166,43 @@ class SwarmMethod(Minimizer):
                     fpbest = fpbest_new
                 # gbest = gbest_new
                 # fgbest = fgbest_new
-                
+            elif self.optim == 'genetic':
+                print(self.itera, reel)
+                if self.itera == 1:
+                    reel = random.randint(1, self.mutation_thresh)
+                elif self.itera % reel == 0:
+                    percentile = random.randint(75, 90)
+                    f_thresh = np.percentile(fpbest, percentile)
+                    best_indices = np.where(fpbest_new <= f_thresh)[0]
+                    worst_indices = np.where(fpbest_new > f_thresh)[0]
+                    n_pairs = len(worst_indices)
+                    n_new = random.randint(n_pairs, 2*n_pairs)
+                    n = len(best_indices)
+                    # 1d fictitious 2d array
+                    pairs_indices = np.random.randint(0, n, 2*n_new)
+                    gen_pairs = pbest_new[pairs_indices].reshape(2, n_new, self.n_args)
+                    gen_points = gen_pairs.sum(axis=0)/2
+
+                    # delete worst points
+                    pbest_new = np.delete(pbest_new, worst_indices, axis=0)
+                    xs = np.delete(xs, worst_indices, axis=0)
+                    vs = np.delete(vs, worst_indices, axis=0)
+                    # add new points
+                    pbest_new = np.concatenate((pbest_new, gen_points), axis=0)
+                    xs = np.concatenate((xs, gen_points), axis=0)
+                    vs = np.concatenate((vs, np.random.uniform(-1, 1, gen_points.shape)), axis=0)
+
+                    self.n = len(xs)
+
+                    pbest = pbest_new
+                    fpbest = func(*pbest.T)
+                    best_index = np.argmin(fpbest)
+                    gbest_new = pbest[best_index]
+                    fgbest_new = func(*gbest_new)
+                    reel = random.randint(1, self.mutation_thresh)
+                else:
+                    pbest = pbest_new
+                    fpbest = fpbest_new
             else:
                 pbest = pbest_new
                 fpbest = fpbest_new
@@ -159,7 +213,7 @@ class SwarmMethod(Minimizer):
                 dntch_count = 0
             if dntch_count > self.itera_thresh:
                 print(f"Global minimum does not change for {dntch_count} iterations")
-                print(f"Stopped at {itera} epoch")
+                print(f"Stopped at {self.itera} epoch")
                 break
             gbest = gbest_new
             fgbest = fgbest_new
