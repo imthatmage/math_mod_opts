@@ -138,7 +138,17 @@ class MainWindow(QMainWindow):
         self.cbox_reflect.setChecked(False)
         self.cbox_reflect.stateChanged.connect(self.click_reflect)
         self.vbox.addWidget(self.cbox_reflect)
+
+        self.cbox_leader = QCheckBox("Leader")
+        self.cbox_leader.setChecked(False)
+        self.cbox_leader.stateChanged.connect(self.click_leader)
+        self.vbox.addWidget(self.cbox_leader)
         
+        self.cbox_fading = QCheckBox("Fading")
+        self.cbox_fading.setChecked(False)
+        self.cbox_fading.stateChanged.connect(self.click_fading)
+        self.vbox.addWidget(self.cbox_fading)
+
         self.combox_optim = QComboBox(self)
         self.combox_optim.addItems(["classic", "annealing", "extinction", "evolution", "genetic"])
         self.vbox.addWidget(self.combox_optim)
@@ -183,6 +193,18 @@ class MainWindow(QMainWindow):
             self.optimizer.options.append("reflection")
         else:
             self.optimizer.options.remove("reflection")
+
+    def click_leader(self):
+        if self.cbox_leader.isChecked():
+            self.optimizer.options.append("leader")
+        else:
+            self.optimizer.options.remove("leader")
+
+    def click_fading(self):
+        if self.cbox_fading.isChecked():
+            self.optimizer.options.append("fading")
+        else:
+            self.optimizer.options.remove("fading")
 
     def draw_n_init_function(self):
         n_args = int(self.ledit_nargs.text())

@@ -73,6 +73,16 @@ class SwarmMethod(Minimizer):
         while self.itera != self.iterations:
             if "inertia" in self.options:
                 w = weights[self.itera]
+            elif "leader" in self.options:
+                percentile = random.randint(75, 90)
+                f_thresh = np.percentile(fpbest, percentile)
+                best_indices = np.where(fpbest_new <= f_thresh)[0]
+                vs[best_indices] *= 1.2
+            elif "fading" in self.options:
+                percentile = random.randint(75, 90)
+                f_thresh = np.percentile(fpbest, percentile)
+                worst_indices = np.where(fpbest_new > f_thresh)[0]
+                vs[worst_indices] *= 0.9 
             else:
                 w = 1
             
