@@ -131,11 +131,16 @@ class MainWindow(QMainWindow):
         
         self.cbox_inertia = QCheckBox("Inertia")
         self.cbox_inertia.setChecked(False)
-        self.cbox_inertia.stateChanged.connect(self.click_box)
+        self.cbox_inertia.stateChanged.connect(self.click_inertia)
         self.vbox.addWidget(self.cbox_inertia)
+
+        self.cbox_reflect = QCheckBox("Reflection")
+        self.cbox_reflect.setChecked(False)
+        self.cbox_reflect.stateChanged.connect(self.click_reflect)
+        self.vbox.addWidget(self.cbox_reflect)
         
         self.combox_optim = QComboBox(self)
-        self.combox_optim.addItems(["classic", "annealing", "extinction", "evolution"])
+        self.combox_optim.addItems(["classic", "annealing", "extinction", "evolution", "genetic"])
         self.vbox.addWidget(self.combox_optim)
         
         # toolbar init
@@ -162,16 +167,22 @@ class MainWindow(QMainWindow):
 
         # Setup a timer to trigger the redraw by calling update_plot.
         self.timer = QtCore.QTimer()
-        self.timer.setInterval(100)
+        self.timer.setInterval(1000)
         self.timer.timeout.connect(self.update_plot)
         # self.timer.start()
         self.timer_started = False 
     
-    def click_box(self):
+    def click_inertia(self):
         if self.cbox_inertia.isChecked():
             self.optimizer.options.append("inertia")
         else:
             self.optimizer.options.remove("inertia")
+
+    def click_reflect(self):
+        if self.cbox_reflect.isChecked():
+            self.optimizer.options.append("reflection")
+        else:
+            self.optimizer.options.remove("reflection")
 
     def draw_n_init_function(self):
         n_args = int(self.ledit_nargs.text())
@@ -196,6 +207,7 @@ class MainWindow(QMainWindow):
         self.optimizer.shift_y = shift_y    
         self.optimizer.tol = tolerance  
         self.optimizer.optim = method
+        self.optimizer.itera = 0
         
         self.func = create_function(f_str, n_args)
 
@@ -251,17 +263,15 @@ class MainWindow(QMainWindow):
                 self.canvas.axes.figure.colorbar(self.c)
 
                 # update time
-                self.iterations = 0 
-                self.canvas.axes.set_title(f"Iterations: {self.iterations}")
+                self.canvas.axes.set_title(f"Iterations: {self.optimizer.itera}")
             else:
                 self.canvas.axes.set_xticks(np.arange(self.x_min, self.x_max+1, 4))
                 self.canvas.axes.set_yticks(np.arange(self.y_min, self.y_max+1, 4))
                 self.canvas.axes.imshow(self.z_data, extent=[self.x_min, self.x_max, self.y_min, self.y_max])
                 self.c.set_clim(vmin=self.z_data.min(), vmax=self.z_data.max())
 
-                # update time
-                self.canvas.axes.set_title(f"Iterations: {self.iterations}")
-                self.iterations += 1
+                # update tick
+                self.canvas.axes.set_title(f"Iterations: {self.optimizer.itera}")
                 self.ledit_ndots.setText(str(self.optimizer.n))
 
                 self.canvas.axes.scatter(self.xs[:, 0], self.xs[:, 1], color='red')
@@ -273,11 +283,9 @@ class MainWindow(QMainWindow):
                     self.toggle_start_stop()
                 print(self.x_best, self.func(*self.x_best))
         else:
-            #self.canvas.axes.plot( color='green')
             self.canvas.axes.plot(np.arange(len(self.optimizer.fgbest_list)), self.optimizer.fgbest_list, color='green')
             
             self.canvas.axes.set_title("Global best path")
-            self.iterations += 1
             self.ledit_ndots.setText(str(self.optimizer.n))
             
             self.xs, self.x_best, inform = next(self.method_gen)
