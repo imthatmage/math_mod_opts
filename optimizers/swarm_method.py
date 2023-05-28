@@ -31,8 +31,8 @@ class SwarmMethod(Minimizer):
         self.shift_x = shift_x
         self.shift_y = shift_y
         self.itera = 0
-        self.eps_x = 2
-        self.eps_y = 2
+        self.eps_x = 0.1
+        self.eps_y = 0.1
     def minimize(self, func, x0):
         '''
         Swarm method
@@ -103,14 +103,29 @@ class SwarmMethod(Minimizer):
                           + self.b*random.random() * (gbest-xs)
 
             if 'reflection' in self.options:
-                xs = xs + vs
-                extend_indices = np.where((xs[:, 0] < self.xmin+self.eps_x) | (xs[:, 0] > self.xmax-self.eps_x))[0]
-                vs[extend_indices, 0] = -vs[extend_indices, 0]
+                xs_tmp = xs + vs
+                extend_indices_x = np.where((xs_tmp[:, 0] < self.xmin+self.eps_x) | (xs_tmp[:, 0] > self.xmax-self.eps_x))[0]
+                # vs[extend_indices, 0] = -vs[extend_indices, 0]
+                extend_indices_init_x = extend_indices_x.copy()
+                extend_indices_y = np.where((xs_tmp[:, 1] < self.ymin+self.eps_y) | (xs_tmp[:, 1] > self.ymax-self.eps_y))[0]
+                # vs[extend_indices, 1] = -vs[extend_indices, 1] 
+                extend_indices_init_y = extend_indices_y.copy()
+                extend_indices = np.hstack((extend_indices_x, extend_indices_y))
+                extend_indices_init = extend_indices.copy()
 
-                extend_indices = np.where((xs[:, 1] < self.ymin+self.eps_y) | (xs[:, 1] > self.ymax-self.eps_y))[0]
-                vs[extend_indices, 1] = -vs[extend_indices, 1] 
+                step = 0.5
+                while extend_indices.sum() > 0:
+                    xs_tmp = xs + step*vs
+                    vs *= step
+                    extend_indices_x = np.where((xs_tmp[:, 0] < self.xmin+self.eps_x) | (xs_tmp[:, 0] > self.xmax-self.eps_x))[0]
+                    # vs[extend_indices, 0] = -vs[extend_indices, 0]
+                    extend_indices_y = np.where((xs_tmp[:, 1] < self.ymin+self.eps_y) | (xs_tmp[:, 1] > self.ymax-self.eps_y))[0]
+                    # vs[extend_indices, 1] = -vs[extend_indices, 1] 
+                    extend_indices = np.hstack((extend_indices_x, extend_indices_y))
+                    step *= 0.5
+                vs[extend_indices_init] = -vs[extend_indices_init]
 
-                xs = xs + vs
+                xs = xs_tmp
             else:
                 xs = xs + vs
 
