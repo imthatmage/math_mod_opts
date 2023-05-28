@@ -283,7 +283,7 @@ class MainWindow(QMainWindow):
 
                 # self.canvas.axes.imshow(self.z_data)
                 self.c = self.canvas.axes.pcolormesh(self.x_data, self.y_data, self.z_data, cmap='viridis')
-                #self.canvas.axes.figure.colorbar(self.c)
+                self.canvas.axes.figure.colorbar(self.c)
 
                 # update time
                 self.canvas.axes.set_title(f"Iterations: {self.optimizer.itera}")
