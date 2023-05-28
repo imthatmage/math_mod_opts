@@ -177,7 +177,7 @@ class MainWindow(QMainWindow):
 
         # Setup a timer to trigger the redraw by calling update_plot.
         self.timer = QtCore.QTimer()
-        self.timer.setInterval(1000)
+        self.timer.setInterval(100)
         self.timer.timeout.connect(self.update_plot)
         # self.timer.start()
         self.timer_started = False 
@@ -236,7 +236,7 @@ class MainWindow(QMainWindow):
         x_init = list(map(float, self.ledit_x.text().split(", ")))
 
         self.method_gen = self.optimizer.minimize(self.func, x_init)
-        self.xs, self.x_best, inform = next(self.method_gen)
+        self.xs, self.x_best, self.inform = next(self.method_gen)
 
         self.x_min = self.optimizer.xmin
         self.x_max = self.optimizer.xmax
@@ -272,6 +272,7 @@ class MainWindow(QMainWindow):
                 self.x_max = 15
                 self.y_min = -20
                 self.y_max = 20
+                self.inform = "INIT"
 
                 x_data = np.linspace(self.x_min, self.x_max, 1000)
                 y_data = np.linspace(self.y_min, self.y_max, 1000)
@@ -282,7 +283,7 @@ class MainWindow(QMainWindow):
 
                 # self.canvas.axes.imshow(self.z_data)
                 self.c = self.canvas.axes.pcolormesh(self.x_data, self.y_data, self.z_data, cmap='viridis')
-                self.canvas.axes.figure.colorbar(self.c)
+                #self.canvas.axes.figure.colorbar(self.c)
 
                 # update time
                 self.canvas.axes.set_title(f"Iterations: {self.optimizer.itera}")
@@ -299,33 +300,37 @@ class MainWindow(QMainWindow):
                 self.canvas.axes.scatter(self.xs[:, 0], self.xs[:, 1], color='red')
                 self.canvas.axes.scatter(self.x_best[0], self.x_best[1], color='black')
 
-                self.xs, self.x_best, inform = next(self.method_gen)
+                if self.inform != "END":
+                    self.xs, self.x_best, self.inform = next(self.method_gen)
+                    print(self.x_best, self.func(*self.x_best))
 
-                if inform == "END":
+                if self.inform == "END":
                     self.toggle_start_stop()
-                print(self.x_best, self.func(*self.x_best))
         else:
             self.canvas.axes.plot(np.arange(len(self.optimizer.fgbest_list)), self.optimizer.fgbest_list, color='green')
             
             self.canvas.axes.set_title("Global best path")
             self.ledit_ndots.setText(str(self.optimizer.n))
             
-            self.xs, self.x_best, inform = next(self.method_gen)
-
-            if inform == "END":
+            if self.inform != "END":
+                self.xs, self.x_best, self.inform = next(self.method_gen)
+                print(self.x_best, self.func(*self.x_best))
+            
+            if self.inform == "END":
                 self.toggle_start_stop()
-            print(self.x_best, self.func(*self.x_best))
-        
+            
+            
         # Trigger the canvas to update and redraw.
         self.canvas.draw()
       
     def change_plot(self):
-        if self.graph_name == "main":
-            self.graph_name = "not_main"
-            self.update_plot()
-        else:
-            self.graph_name = "main"
-            self.update_plot()
+        if self.inform != "INIT":
+            if self.graph_name == "main":
+                self.graph_name = "not_main"
+                self.update_plot()
+            else:
+                self.graph_name = "main"
+                self.update_plot()
           
     def toggle_start_stop(self):
         if self.timer_started:
