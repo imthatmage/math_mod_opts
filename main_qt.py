@@ -84,6 +84,14 @@ class MainWindow(QMainWindow):
         self.start_stop_button = QPushButton("START/STOP")
         self.start_stop_button.clicked.connect(self.toggle_start_stop)
         self.grid_iter_buttons.addWidget(self.start_stop_button, 0, 0, 1, 2)
+        
+        self.prev_button = QPushButton("Prev")
+        self.prev_button.clicked.connect(self.prev_step)
+        self.grid_iter_buttons.addWidget(self.prev_button, 1, 0)
+
+        self.next_button = QPushButton("Next")
+        self.next_button.clicked.connect(self.next_step)
+        self.grid_iter_buttons.addWidget(self.next_button, 1, 1)
 
         self.draw_button = QPushButton("Draw")
         self.draw_button.clicked.connect(self.draw_n_init_function)
@@ -185,6 +193,8 @@ class MainWindow(QMainWindow):
         # Flag for timer
         self.is_func_init = False
         
+        self.prev_next_itera = self.optimizer.itera
+        
         # Setup a timer to trigger the redraw by calling update_plot.
         self.timer = QtCore.QTimer()
         self.timer.setInterval(100)
@@ -241,6 +251,7 @@ class MainWindow(QMainWindow):
             self.optimizer.tol = tolerance  
             self.optimizer.optim = method
             self.optimizer.itera = 0
+            self.prev_next_itera = 0
             
             self.func = create_function(f_str, n_args)
 
@@ -300,6 +311,7 @@ class MainWindow(QMainWindow):
 
                 # update time
                 self.canvas.axes.set_title(f"Iterations: {self.optimizer.itera}")
+                self.prev_next_itera = self.optimizer.itera
             else:
                 self.canvas.axes.set_xticks(np.arange(self.x_min, self.x_max+1, 4))
                 self.canvas.axes.set_yticks(np.arange(self.y_min, self.y_max+1, 4))
@@ -308,16 +320,18 @@ class MainWindow(QMainWindow):
 
                 # update tick
                 self.canvas.axes.set_title(f"Iterations: {self.optimizer.itera}")
+                self.prev_next_itera = self.optimizer.itera
                 self.ledit_ndots.setText(str(self.optimizer.n))
 
                 self.canvas.axes.scatter(self.xs[:, 0], self.xs[:, 1], color='red')
                 self.canvas.axes.scatter(self.x_best[0], self.x_best[1], color='black')
 
                 if self.inform != "END":
-                    self.xs, self.x_best, self.inform = next(self.method_gen)
                     print(self.x_best, self.func(*self.x_best))
+                    self.xs, self.x_best, self.inform = next(self.method_gen)
 
                 if self.inform == "END":
+                    print(self.x_best, self.func(*self.x_best))
                     self.toggle_start_stop()
         else:
             self.canvas.axes.plot(np.arange(len(self.optimizer.fgbest_list)), self.optimizer.fgbest_list, color='green')
@@ -326,10 +340,11 @@ class MainWindow(QMainWindow):
             self.ledit_ndots.setText(str(self.optimizer.n))
             
             if self.inform != "END":
-                self.xs, self.x_best, self.inform = next(self.method_gen)
                 print(self.x_best, self.func(*self.x_best))
+                self.xs, self.x_best, self.inform = next(self.method_gen)
             
             if self.inform == "END":
+                print(self.x_best, self.func(*self.x_best))
                 self.toggle_start_stop()
             
             
@@ -352,6 +367,48 @@ class MainWindow(QMainWindow):
         elif not self.timer_started and self.is_func_init:
             self.timer.start()
             self.timer_started = True
+            
+    def prev_step(self):
+        if not self.timer_started and self.is_func_init and self.prev_next_itera > 0:
+            self.prev_next_itera -= 1
+            # Clear the canvas
+            self.canvas.axes.cla()
+            
+            self.canvas.axes.set_xticks(np.arange(self.x_min, self.x_max+1, 4))
+            self.canvas.axes.set_yticks(np.arange(self.y_min, self.y_max+1, 4))
+            self.canvas.axes.imshow(self.z_data, extent=[self.x_min, self.x_max, self.y_min, self.y_max])
+            self.c.set_clim(vmin=self.z_data.min(), vmax=self.z_data.max())
+
+            # Update tick
+            self.canvas.axes.set_title(f"Iterations: {self.prev_next_itera}")
+            self.ledit_ndots.setText(str(self.optimizer.n))
+
+            self.canvas.axes.scatter(self.optimizer.xs_list[self.prev_next_itera][:, 0], self.optimizer.xs_list[self.prev_next_itera][:, 1], color='red')
+            self.canvas.axes.scatter(self.optimizer.gbest_list[self.prev_next_itera][0], self.optimizer.gbest_list[self.prev_next_itera][1], color='black')
+            
+            # Trigger the canvas to update and redraw.
+            self.canvas.draw()
+            
+    def next_step(self):
+        if not self.timer_started and self.is_func_init and self.prev_next_itera < self.optimizer.itera:
+            self.prev_next_itera += 1
+            # Clear the canvas
+            self.canvas.axes.cla()
+            
+            self.canvas.axes.set_xticks(np.arange(self.x_min, self.x_max+1, 4))
+            self.canvas.axes.set_yticks(np.arange(self.y_min, self.y_max+1, 4))
+            self.canvas.axes.imshow(self.z_data, extent=[self.x_min, self.x_max, self.y_min, self.y_max])
+            self.c.set_clim(vmin=self.z_data.min(), vmax=self.z_data.max())
+
+            # Update tick
+            self.canvas.axes.set_title(f"Iterations: {self.prev_next_itera}")
+            self.ledit_ndots.setText(str(self.optimizer.n))
+
+            self.canvas.axes.scatter(self.optimizer.xs_list[self.prev_next_itera][:, 0], self.optimizer.xs_list[self.prev_next_itera][:, 1], color='red')
+            self.canvas.axes.scatter(self.optimizer.gbest_list[self.prev_next_itera][0], self.optimizer.gbest_list[self.prev_next_itera][1], color='black')
+            
+            # Trigger the canvas to update and redraw.
+            self.canvas.draw()
 
 
 def create_function(f_str, n_args):
