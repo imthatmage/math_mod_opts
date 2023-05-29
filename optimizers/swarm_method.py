@@ -31,8 +31,10 @@ class SwarmMethod(Minimizer):
         self.shift_x = shift_x
         self.shift_y = shift_y
         self.itera = 0
-        self.eps_x = 0.1
-        self.eps_y = 0.1
+        self.eps_x = 0.001
+        self.eps_y = 0.001
+
+        self.m_cat = int(self.n*0.1)
     def minimize(self, func, x0):
         '''
         Swarm method
@@ -103,31 +105,39 @@ class SwarmMethod(Minimizer):
                           + self.b*random.random() * (gbest-xs)
 
             if 'reflection' in self.options:
-                xs_tmp = xs + vs
+                if self.optim != 'cat':
+                    xs_tmp = xs + vs
+                else:
+                    xs_tmp = xs
                 extend_indices_x = np.where((xs_tmp[:, 0] < self.xmin+self.eps_x) | (xs_tmp[:, 0] > self.xmax-self.eps_x))[0]
-                # vs[extend_indices, 0] = -vs[extend_indices, 0]
                 extend_indices_init_x = extend_indices_x.copy()
                 extend_indices_y = np.where((xs_tmp[:, 1] < self.ymin+self.eps_y) | (xs_tmp[:, 1] > self.ymax-self.eps_y))[0]
-                # vs[extend_indices, 1] = -vs[extend_indices, 1] 
                 extend_indices_init_y = extend_indices_y.copy()
                 extend_indices = np.hstack((extend_indices_x, extend_indices_y))
                 extend_indices_init = extend_indices.copy()
 
                 step = 0.5
+                print("Reflect start")
                 while extend_indices.sum() > 0:
                     xs_tmp = xs + step*vs
                     vs *= step
                     extend_indices_x = np.where((xs_tmp[:, 0] < self.xmin+self.eps_x) | (xs_tmp[:, 0] > self.xmax-self.eps_x))[0]
-                    # vs[extend_indices, 0] = -vs[extend_indices, 0]
                     extend_indices_y = np.where((xs_tmp[:, 1] < self.ymin+self.eps_y) | (xs_tmp[:, 1] > self.ymax-self.eps_y))[0]
-                    # vs[extend_indices, 1] = -vs[extend_indices, 1] 
                     extend_indices = np.hstack((extend_indices_x, extend_indices_y))
                     step *= 0.5
+
+                    if step < 1e-6:
+                        break
+
+                print("Reflect end")
                 vs[extend_indices_init] = -vs[extend_indices_init]
 
                 xs = xs_tmp
             else:
-                xs = xs + vs
+                if self.optim != 'cat':
+                    xs = xs + vs
+                else:
+                    xs = xs
 
             fs = func(*xs.T)
             best_indices = np.argmin(np.vstack((fpbest, fs)), axis=0)
@@ -141,6 +151,106 @@ class SwarmMethod(Minimizer):
             fgbest_new = func(*gbest_new)
 
             self.itera += 1
+
+            if self.optim == 'cat':
+                worst_index = np.argmax(fpbest_new)
+                worst_new = pbest_new[worst_index]
+                fgworst_new = func(*worst_new)
+                if self.itera == 1:
+                    seeking_mask = np.zeros(self.n)
+                    trace_indices = np.where(seeking_mask == 0)[0]
+                    seek_trace_indices = np.random.choice(trace_indices, 
+                                                     int(0.1*len(trace_indices)))
+                    seeking_mask[seek_trace_indices] = 1
+                    # NxMxN_ARGS
+                    seek_points = np.repeat(xs[:, None], self.m_cat, axis=1)
+                    pbest_seek = np.repeat(pbest_new[:, None], self.m_cat, axis=1)
+                    # NxM
+                    fpbest_seek = np.repeat(fpbest_new[:, None], self.m_cat, axis=1)
+
+
+                seeking_indices = np.where(seeking_mask > 0)[0]
+                print(f"Seeking_indices len: {len(seeking_indices)}")
+
+                tmp_seek_points = seek_points.copy()
+                tmp_seek_points[seeking_indices] += np.random.normal \
+                        (0, 1, (len(seeking_indices), self.m_cat, self.n_args))
+                if len(seeking_indices) != 0:
+                    # acception rejection (if we outside of our bounding box)
+                    if 'reflection' in self.options:
+                        extend_indices_x = np.where((tmp_seek_points[seeking_indices][:, 0] < self.xmin+self.eps_x) | (tmp_seek_points[seeking_indices][:, 0] > self.xmax-self.eps_x))[0]
+                        extend_indices_y = np.where((tmp_seek_points[seeking_indices][:, 1] < self.ymin+self.eps_y) | (tmp_seek_points[seeking_indices][:, 1] > self.ymax-self.eps_y))[0]
+                        extend_indices = np.hstack((extend_indices_x, extend_indices_y))
+
+                        print("Start: ")
+                        counts = 0
+                        while extend_indices.sum() > 0:
+                            tmp_seek_points[seeking_indices][extend_indices] = seek_points[seeking_indices][extend_indices] + np.random.normal \
+                                    (0, 1, (len(extend_indices), self.m_cat, self.n_args))
+                            extend_indices_x = np.where((tmp_seek_points[seeking_indices][:, 0] < self.xmin+self.eps_x) | (tmp_seek_points[seeking_indices][:, 0] > self.xmax-self.eps_x))[0]
+                            extend_indices_y = np.where((tmp_seek_points[seeking_indices][:, 1] < self.ymin+self.eps_y) | (tmp_seek_points[seeking_indices][:, 1] > self.ymax-self.eps_y))[0]
+                            extend_indices = np.hstack((extend_indices_x, extend_indices_y))
+                            counts += 1
+                            if counts == 30:
+                                break
+                        print("End: ")
+
+                    seek_points = tmp_seek_points
+                    # N_SEEK_INDICESxM
+                    fseek = func(*seek_points[seeking_indices].T).T
+
+                    seek_check_both = np.concatenate((fpbest_seek[seeking_indices][..., None], fseek[..., None]), axis=-1)
+                    seek_point_both = np.concatenate((pbest_seek[seeking_indices][:, None], seek_points[seeking_indices][:, None]), axis=1)
+                    seek_best_indices = np.argmin(seek_check_both, axis=-1).reshape(-1)
+                    tmp_seek_n = len(fseek.reshape(-1))
+                    fpbest_seek[seeking_indices] = seek_check_both.reshape(-1, 2)[(np.arange(tmp_seek_n), seek_best_indices)] \
+                            .reshape(fseek.shape[0], fseek.shape[1])
+                    pbest_seek[seeking_indices] = seek_point_both.reshape(-1, 2, self.n_args)[(np.arange(tmp_seek_n), seek_best_indices)] \
+                            .reshape(fseek.shape[0], fseek.shape[1], self.n_args)
+
+                    seek_probs = np.clip(((fgworst_new - fpbest_seek[seeking_indices]))/(fgworst_new - fgbest_new), 0, 1)
+
+                    real_probs = np.random.uniform(0, 1, (len(seeking_indices), self.m_cat))
+
+                    update_seek_mask = (seek_probs - real_probs)
+                    update_seek_indices = np.argmax(update_seek_mask, axis=1)
+                    pos_mask = update_seek_mask.max(axis=1) > 0
+                    update_seek_indices = update_seek_indices[pos_mask]
+                    x_indices = np.arange(len(seeking_indices))[pos_mask]
+
+                    seek_update_points = pbest_seek[(x_indices, update_seek_indices)]
+
+                    xs[seeking_indices[pos_mask]] = seek_update_points
+                else:
+                    pos_mask = np.zeros(len(seeking_indices)).astype('bool')
+
+
+                trace_indices = np.where(seeking_mask == 0)[0]
+
+                vs[trace_indices] = w*vs[trace_indices] \
+                    + self.a*random.random() * (pbest_new[trace_indices]-xs[trace_indices]) \
+                    + self.b*random.random() * (gbest_new-xs[trace_indices])
+                xs[trace_indices] += vs[trace_indices]
+
+                exclude_indices = seeking_indices[pos_mask]
+                seeking_mask[exclude_indices] = 0
+                trace_indices = np.where(seeking_mask == 0)[0]
+
+                seek_trace_indices = np.random.choice(trace_indices, 
+                                                 int(0.1*len(trace_indices)))
+                # update previous points
+                seeking_mask[seeking_mask > 0] += 1
+                # kick stacked points
+                seeking_mask[seeking_mask > 6] = 0
+
+                seeking_mask[seek_trace_indices] = 1
+
+                seeking_indices = np.where(seeking_mask > 0)[0]
+                seek_points[seeking_indices] = np.repeat(xs[seeking_indices][:, None], self.m_cat, axis=1)
+
+                pbest = pbest_new
+                fpbest = fpbest_new
+
 
             if self.optim == 'annealing':
                 E = np.exp(-(fpbest_new-fgbest) / fpbest_new)
