@@ -150,7 +150,7 @@ class MainWindow(QMainWindow):
         self.vbox.addWidget(self.cbox_fading)
 
         self.combox_optim = QComboBox(self)
-        self.combox_optim.addItems(["classic", "annealing", "extinction", "evolution", "genetic"])
+        self.combox_optim.addItems(["classic", "annealing", "extinction", "evolution", "genetic", "cat"])
         self.vbox.addWidget(self.combox_optim)
         
         # toolbar init
