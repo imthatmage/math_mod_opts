@@ -70,7 +70,13 @@ class SwarmMethod(Minimizer):
         yield xs, gbest, 'OK'
 
         weights = np.flip(np.linspace(0, 1, self.iterations))
+        
+        self.gbest_list = []
+        self.gbest_list.append(gbest)
         self.fgbest_list = []
+        self.fgbest_list.append(fgbest)
+        self.xs_list = []
+        self.xs_list.append(xs)
         
         while self.itera != self.iterations:
             if "inertia" in self.options:
@@ -352,9 +358,11 @@ class SwarmMethod(Minimizer):
                 break
             gbest = gbest_new
             fgbest = fgbest_new
-            self.fgbest_list.append(fgbest)
             
-
+            self.gbest_list.append(gbest)
+            self.fgbest_list.append(fgbest)
+            self.xs_list.append(xs)
+            
             yield xs, gbest, "OK"
 
         yield xs, gbest, "END"
