@@ -24,7 +24,8 @@ from PyQt6.QtWidgets import (
     QComboBox,
     QCheckBox,
     QGroupBox,
-    QToolBar
+    QToolBar,
+    QSlider
 )
 
 
@@ -70,8 +71,15 @@ class MainWindow(QMainWindow):
 
         self.ledit_func = QLineEdit()
         qf_layout0 = QFormLayout()
-        qf_layout0.addRow("function", self.ledit_func)
-        self.vlayout0.addLayout(qf_layout0)
+        qf_layout0.addRow("Function", self.ledit_func)
+        
+        
+        self.sld_itera = QSlider(QtCore.Qt.Orientation.Horizontal, self)
+        self.sld_itera.setRange(0, self.optimizer.itera)   
+        self.sld_itera.setPageStep(1)
+        self.sld_itera.valueChanged.connect(self.slider_update)
+        qf_layout0.addRow("Iteration", self.sld_itera)
+        self.vlayout0.addLayout(qf_layout0) 
 
         # vlayout1 init
         self.vlayout1.addStretch()
@@ -312,6 +320,8 @@ class MainWindow(QMainWindow):
                 # update time
                 self.canvas.axes.set_title(f"Iterations: {self.optimizer.itera}")
                 self.prev_next_itera = self.optimizer.itera
+                self.sld_itera.setRange(0, self.optimizer.itera)
+                self.sld_itera.setValue(self.optimizer.itera)
             else:
                 self.canvas.axes.set_xticks(np.arange(self.x_min, self.x_max+1, 4))
                 self.canvas.axes.set_yticks(np.arange(self.y_min, self.y_max+1, 4))
@@ -321,6 +331,8 @@ class MainWindow(QMainWindow):
                 # update tick
                 self.canvas.axes.set_title(f"Iterations: {self.optimizer.itera}")
                 self.prev_next_itera = self.optimizer.itera
+                self.sld_itera.setRange(0, self.optimizer.itera)
+                self.sld_itera.setValue(self.optimizer.itera)
                 self.ledit_ndots.setText(str(self.optimizer.n))
 
                 self.canvas.axes.scatter(self.xs[:, 0], self.xs[:, 1], color='red')
@@ -371,6 +383,7 @@ class MainWindow(QMainWindow):
     def prev_step(self):
         if not self.timer_started and self.is_func_init and self.prev_next_itera > 0:
             self.prev_next_itera -= 1
+            self.sld_itera.setValue(self.prev_next_itera)
             # Clear the canvas
             self.canvas.axes.cla()
             
@@ -392,6 +405,28 @@ class MainWindow(QMainWindow):
     def next_step(self):
         if not self.timer_started and self.is_func_init and self.prev_next_itera < self.optimizer.itera:
             self.prev_next_itera += 1
+            self.sld_itera.setValue(self.prev_next_itera)
+            # Clear the canvas
+            self.canvas.axes.cla()
+            
+            self.canvas.axes.set_xticks(np.arange(self.x_min, self.x_max+1, 4))
+            self.canvas.axes.set_yticks(np.arange(self.y_min, self.y_max+1, 4))
+            self.canvas.axes.imshow(self.z_data, extent=[self.x_min, self.x_max, self.y_min, self.y_max])
+            self.c.set_clim(vmin=self.z_data.min(), vmax=self.z_data.max())
+
+            # Update tick
+            self.canvas.axes.set_title(f"Iterations: {self.prev_next_itera}")
+            self.ledit_ndots.setText(str(self.optimizer.n))
+
+            self.canvas.axes.scatter(self.optimizer.xs_list[self.prev_next_itera][:, 0], self.optimizer.xs_list[self.prev_next_itera][:, 1], color='red')
+            self.canvas.axes.scatter(self.optimizer.gbest_list[self.prev_next_itera][0], self.optimizer.gbest_list[self.prev_next_itera][1], color='black')
+            
+            # Trigger the canvas to update and redraw.
+            self.canvas.draw()
+            
+    def slider_update(self):
+        if not self.timer_started and self.is_func_init:
+            self.prev_next_itera = self.sld_itera.value()
             # Clear the canvas
             self.canvas.axes.cla()
             
