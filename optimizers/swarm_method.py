@@ -169,10 +169,10 @@ class SwarmMethod(Minimizer):
                                                      int(0.1*len(trace_indices)))
                     seeking_mask[seek_trace_indices] = 1
                     # NxMxN_ARGS
-                    seek_points = np.repeat(xs[:, None], self.m_cat, axis=1)
-                    pbest_seek = np.repeat(pbest_new[:, None], self.m_cat, axis=1)
+                    seek_points = np.repeat(xs[:, None].copy(), self.m_cat, axis=1)
+                    pbest_seek = np.repeat(pbest_new[:, None].copy(), self.m_cat, axis=1)
                     # NxM
-                    fpbest_seek = np.repeat(fpbest_new[:, None], self.m_cat, axis=1)
+                    fpbest_seek = np.repeat(fpbest_new[:, None].copy(), self.m_cat, axis=1)
 
 
                 seeking_indices = np.where(seeking_mask > 0)[0]
@@ -361,7 +361,7 @@ class SwarmMethod(Minimizer):
             
             self.gbest_list.append(gbest)
             self.fgbest_list.append(fgbest)
-            self.xs_list.append(xs)
+            self.xs_list.append(xs.copy())
             
             yield xs, gbest, "OK"
 
