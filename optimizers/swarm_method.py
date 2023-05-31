@@ -76,7 +76,7 @@ class SwarmMethod(Minimizer):
         self.fgbest_list = []
         self.fgbest_list.append(fgbest)
         self.xs_list = []
-        self.xs_list.append(xs)
+        self.xs_list.append(xs.copy())
         
         while self.itera != self.iterations:
             if "inertia" in self.options:
@@ -352,16 +352,18 @@ class SwarmMethod(Minimizer):
                 dntch_count += 1
             else:
                 dntch_count = 0
-            if dntch_count > self.itera_thresh:
-                print(f"Global minimum does not change for {dntch_count} iterations")
-                print(f"Stopped at {self.itera} epoch")
-                break
+                
             gbest = gbest_new
             fgbest = fgbest_new
             
             self.gbest_list.append(gbest)
             self.fgbest_list.append(fgbest)
             self.xs_list.append(xs.copy())
+            
+            if dntch_count > self.itera_thresh:
+                print(f"Global minimum does not change for {dntch_count} iterations")
+                print(f"Stopped at {self.itera} epoch")
+                break
             
             yield xs, gbest, "OK"
 

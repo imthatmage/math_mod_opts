@@ -73,7 +73,6 @@ class MainWindow(QMainWindow):
         qf_layout0 = QFormLayout()
         qf_layout0.addRow("Function", self.ledit_func)
         
-        
         self.sld_itera = QSlider(QtCore.Qt.Orientation.Horizontal, self)
         self.sld_itera.setRange(0, self.optimizer.itera)   
         self.sld_itera.setPageStep(1)
@@ -201,6 +200,8 @@ class MainWindow(QMainWindow):
         # Flag for timer
         self.is_func_init = False
         
+        self.fgbest_full_list = []
+        self.label_list = []
         self.prev_next_itera = self.optimizer.itera
         
         # Setup a timer to trigger the redraw by calling update_plot.
@@ -286,6 +287,14 @@ class MainWindow(QMainWindow):
             self.update_plot()
             
             self.is_func_init = True
+            self.fgbest_full_list.append(self.optimizer.fgbest_list)
+            # label for gbest path plot
+            label = str(self.optimizer.optim)
+            if len(self.optimizer.options) != 0:
+                label += " with options:"
+                for option in self.optimizer.options:
+                    label += " " + str(option)
+            self.label_list.append(label)
             # self.toggle_start_stop()
 
     def update_plot(self):
@@ -338,26 +347,26 @@ class MainWindow(QMainWindow):
                 self.canvas.axes.scatter(self.xs[:, 0], self.xs[:, 1], color='red')
                 self.canvas.axes.scatter(self.x_best[0], self.x_best[1], color='black')
 
+                if self.inform == "END":
+                    self.toggle_start_stop()
+                
                 if self.inform != "END":
                     print(self.x_best, self.func(*self.x_best))
                     self.xs, self.x_best, self.inform = next(self.method_gen)
-
-                if self.inform == "END":
-                    print(self.x_best, self.func(*self.x_best))
-                    self.toggle_start_stop()
         else:
-            self.canvas.axes.plot(np.arange(len(self.optimizer.fgbest_list)), self.optimizer.fgbest_list, color='green')
+            for i in range(len(self.fgbest_full_list)):
+                self.canvas.axes.plot(np.arange(len(self.fgbest_full_list[i])), self.fgbest_full_list[i], label=f"{i+1}. " + self.label_list[i])
+                self.canvas.axes.legend()
             
             self.canvas.axes.set_title("Global best path")
             self.ledit_ndots.setText(str(self.optimizer.n))
             
+            if self.inform == "END":
+                self.toggle_start_stop()
+            
             if self.inform != "END":
                 print(self.x_best, self.func(*self.x_best))
                 self.xs, self.x_best, self.inform = next(self.method_gen)
-            
-            if self.inform == "END":
-                print(self.x_best, self.func(*self.x_best))
-                self.toggle_start_stop()
             
             
         # Trigger the canvas to update and redraw.
@@ -376,12 +385,12 @@ class MainWindow(QMainWindow):
         if self.timer_started:
             self.timer.stop()
             self.timer_started = False
-        elif not self.timer_started and self.is_func_init:
+        elif not self.timer_started and self.is_func_init and self.inform != "END":
             self.timer.start()
             self.timer_started = True
             
     def prev_step(self):
-        if not self.timer_started and self.is_func_init and self.prev_next_itera > 0:
+        if not self.timer_started and self.is_func_init and self.prev_next_itera > 0 and self.graph_name == "main":
             self.prev_next_itera -= 1
             self.sld_itera.setValue(self.prev_next_itera)
             # Clear the canvas
@@ -403,7 +412,7 @@ class MainWindow(QMainWindow):
             self.canvas.draw()
             
     def next_step(self):
-        if not self.timer_started and self.is_func_init and self.prev_next_itera < self.optimizer.itera:
+        if not self.timer_started and self.is_func_init and self.prev_next_itera < self.optimizer.itera and self.graph_name == "main":
             self.prev_next_itera += 1
             self.sld_itera.setValue(self.prev_next_itera)
             # Clear the canvas
@@ -425,7 +434,7 @@ class MainWindow(QMainWindow):
             self.canvas.draw()
             
     def slider_update(self):
-        if not self.timer_started and self.is_func_init:
+        if not self.timer_started and self.is_func_init and self.graph_name == "main":
             self.prev_next_itera = self.sld_itera.value()
             # Clear the canvas
             self.canvas.axes.cla()
@@ -438,7 +447,6 @@ class MainWindow(QMainWindow):
             # Update tick
             self.canvas.axes.set_title(f"Iterations: {self.prev_next_itera}")
             self.ledit_ndots.setText(str(self.optimizer.n))
-
             self.canvas.axes.scatter(self.optimizer.xs_list[self.prev_next_itera][:, 0], self.optimizer.xs_list[self.prev_next_itera][:, 1], color='red')
             self.canvas.axes.scatter(self.optimizer.gbest_list[self.prev_next_itera][0], self.optimizer.gbest_list[self.prev_next_itera][1], color='black')
             
