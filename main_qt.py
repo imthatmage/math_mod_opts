@@ -25,7 +25,8 @@ from PyQt6.QtWidgets import (
     QCheckBox,
     QGroupBox,
     QToolBar,
-    QSlider
+    QSlider,
+    QDialog
 )
 
 
@@ -42,6 +43,27 @@ class MplCanvas(FigureCanvas):
         self.axes = fig.add_subplot(111)
         super(MplCanvas, self).__init__(fig)
 
+# Compare plot window
+class ComparePlot(QDialog):
+
+    def __init__(self, m_wind, parent=None):
+        super(ComparePlot, self).__init__(parent)
+        self.m_wind = m_wind
+        # Create widgets
+        width, height= 12, 12
+        dpi = 100
+        self.fig = Figure(figsize=(width, height), dpi=dpi)
+        self.canvas = MplCanvas(self, self.fig, width=width, height=height, dpi=dpi)
+        # Create layout and add widgets
+        layout = QVBoxLayout()
+        layout.addWidget(self.canvas)
+        # Set dialog layout
+        self.setLayout(layout)
+        self.want_to_close = False
+    
+    def closeEvent(self, evnt):
+        self.m_wind.show_compare_plot()
+        evnt.accept()
 
 class MainWindow(QMainWindow):
 
@@ -68,6 +90,10 @@ class MainWindow(QMainWindow):
         self.fig = Figure(figsize=(width, height), dpi=dpi)
         self.canvas = MplCanvas(self, self.fig, width=width, height=height, dpi=dpi)
         self.vlayout0.addWidget(self.canvas)
+        
+        # init compare plot
+        self.cmp_plot = ComparePlot(self)
+
 
         self.ledit_func = QLineEdit()
         qf_layout0 = QFormLayout()
@@ -175,13 +201,18 @@ class MainWindow(QMainWindow):
         self.combox_optim.addItems(["classic", "annealing", "extinction", "evolution", "genetic", "cat"])
         self.vbox_checkboxes.addWidget(self.combox_optim)
         
+        self.cbox_scale = QCheckBox("Dynamic scale")
+        self.cbox_scale.setChecked(False)
+        self.cbox_scale.stateChanged.connect(self.click_scale)
+        self.vbox_checkboxes.addWidget(self.cbox_scale)
+        
         # toolbar init
         self.toolbar = QToolBar("Main toolbar")
         self.addToolBar(self.toolbar)
         
-        self.button_act = QPushButton("Change plot", self)
-        self.button_act.setStatusTip("Change plot button")
-        self.button_act.clicked.connect(self.change_plot)
+        self.button_act = QPushButton("Show compare plot", self)
+        self.button_act.setStatusTip("Show compare plot button")
+        self.button_act.clicked.connect(self.show_compare_plot)
         self.toolbar.addWidget(self.button_act)
         
         self.vlayout1.addStretch()
@@ -199,6 +230,9 @@ class MainWindow(QMainWindow):
         
         # Flag for timer
         self.is_func_init = False
+        
+        # Flag for scaling
+        self.scale = False
         
         self.fgbest_full_list = []
         self.label_list = []
@@ -234,6 +268,12 @@ class MainWindow(QMainWindow):
             self.optimizer.options.append("fading")
         else:
             self.optimizer.options.remove("fading")
+            
+    def click_scale(self):
+        if self.cbox_scale.isChecked():
+            self.scale = True
+        else:
+            self.scale = False
 
     def draw_n_init_function(self):
         f_str = str(self.ledit_func.text())
@@ -284,6 +324,7 @@ class MainWindow(QMainWindow):
 
             self.z_data = tmp_data
 
+            self.inform = "F_INIT"
             self.update_plot()
             
             self.is_func_init = True
@@ -332,10 +373,20 @@ class MainWindow(QMainWindow):
                 self.sld_itera.setRange(0, self.optimizer.itera)
                 self.sld_itera.setValue(self.optimizer.itera)
             else:
-                self.canvas.axes.set_xticks(np.arange(self.x_min, self.x_max+1, 4))
-                self.canvas.axes.set_yticks(np.arange(self.y_min, self.y_max+1, 4))
+                if self.scale:
+                    a = max([max(self.xs[:, 0]) - min(self.xs[:, 0]), max(self.xs[:, 1]) - min(self.xs[:, 1])])
+                    self.canvas.axes.set_xticks(np.linspace(min(self.xs[:, 0]), min(self.xs[:, 0]) + a, 10))
+                    self.canvas.axes.set_yticks(np.linspace(min(self.xs[:, 1]), min(self.xs[:, 1]) + a, 10))
+                    self.canvas.axes.set_xlim(min(self.xs[:, 0]), min(self.xs[:, 0]) + a)
+                    self.canvas.axes.set_ylim(min(self.xs[:, 1]), min(self.xs[:, 1]) + a)
+                    self.c.set_clim(vmin=min(self.func(*self.xs.T)), vmax=max(self.func(*self.xs.T)))
+                else:
+                    self.canvas.axes.set_xticks(np.linspace(self.x_min, self.x_max, 12))
+                    self.canvas.axes.set_yticks(np.linspace(self.y_min, self.y_max, 12))
+                    self.canvas.axes.set_xlim(self.x_min, self.x_max)
+                    self.canvas.axes.set_ylim(self.y_min, self.y_max)
+                    self.c.set_clim(vmin=self.z_data.min(), vmax=self.z_data.max())
                 self.canvas.axes.imshow(self.z_data, extent=[self.x_min, self.x_max, self.y_min, self.y_max])
-                self.c.set_clim(vmin=self.z_data.min(), vmax=self.z_data.max())
 
                 # update tick
                 self.canvas.axes.set_title(f"Iterations: {self.optimizer.itera}")
@@ -354,12 +405,17 @@ class MainWindow(QMainWindow):
                     print(self.x_best, self.func(*self.x_best))
                     self.xs, self.x_best, self.inform = next(self.method_gen)
         else:
+            self.cmp_plot.canvas.axes.cla()
+            self.cmp_plot.canvas.axes.grid()
             for i in range(len(self.fgbest_full_list)):
-                self.canvas.axes.plot(np.arange(len(self.fgbest_full_list[i])), self.fgbest_full_list[i], label=f"{i+1}. " + self.label_list[i])
-                self.canvas.axes.legend()
+                self.cmp_plot.canvas.axes.plot(np.arange(len(self.fgbest_full_list[i])), self.fgbest_full_list[i], label=f"{i+1}. " + self.label_list[i])
+                self.cmp_plot.canvas.axes.legend()
             
-            self.canvas.axes.set_title("Global best path")
+            self.cmp_plot.canvas.axes.set_title("Global best path")
             self.ledit_ndots.setText(str(self.optimizer.n))
+            
+            self.cmp_plot.canvas.draw()
+            self.cmp_plot.show()
             
             if self.inform == "END":
                 self.toggle_start_stop()
@@ -372,7 +428,7 @@ class MainWindow(QMainWindow):
         # Trigger the canvas to update and redraw.
         self.canvas.draw()
       
-    def change_plot(self):
+    def show_compare_plot(self):
         if self.inform != "INIT":
             if self.graph_name == "main":
                 self.graph_name = "not_main"
@@ -396,10 +452,20 @@ class MainWindow(QMainWindow):
             # Clear the canvas
             self.canvas.axes.cla()
             
-            self.canvas.axes.set_xticks(np.arange(self.x_min, self.x_max+1, 4))
-            self.canvas.axes.set_yticks(np.arange(self.y_min, self.y_max+1, 4))
+            if self.scale:
+                a = max([max(self.optimizer.xs_list[self.prev_next_itera][:, 0]) - min(self.optimizer.xs_list[self.prev_next_itera][:, 0]), max(self.optimizer.xs_list[self.prev_next_itera][:, 1]) - min(self.optimizer.xs_list[self.prev_next_itera][:, 1])])
+                self.canvas.axes.set_xticks(np.linspace(min(self.optimizer.xs_list[self.prev_next_itera][:, 0]), min(self.optimizer.xs_list[self.prev_next_itera][:, 0]) + a, 10))
+                self.canvas.axes.set_yticks(np.linspace(min(self.optimizer.xs_list[self.prev_next_itera][:, 1]), min(self.optimizer.xs_list[self.prev_next_itera][:, 1]) + a, 10))
+                self.canvas.axes.set_xlim(min(self.optimizer.xs_list[self.prev_next_itera][:, 0]), min(self.optimizer.xs_list[self.prev_next_itera][:, 0]) + a)
+                self.canvas.axes.set_ylim(min(self.optimizer.xs_list[self.prev_next_itera][:, 1]), min(self.optimizer.xs_list[self.prev_next_itera][:, 1]) + a)
+                self.c.set_clim(vmin=min(self.func(*self.optimizer.xs_list[self.prev_next_itera].T)), vmax=max(self.func(*self.optimizer.xs_list[self.prev_next_itera].T)))
+            else:
+                self.canvas.axes.set_xticks(np.linspace(self.x_min, self.x_max, 12))
+                self.canvas.axes.set_yticks(np.linspace(self.y_min, self.y_max, 12))
+                self.canvas.axes.set_xlim(self.x_min, self.x_max)
+                self.canvas.axes.set_ylim(self.y_min, self.y_max)
+                self.c.set_clim(vmin=self.z_data.min(), vmax=self.z_data.max())
             self.canvas.axes.imshow(self.z_data, extent=[self.x_min, self.x_max, self.y_min, self.y_max])
-            self.c.set_clim(vmin=self.z_data.min(), vmax=self.z_data.max())
 
             # Update tick
             self.canvas.axes.set_title(f"Iterations: {self.prev_next_itera}")
@@ -418,10 +484,20 @@ class MainWindow(QMainWindow):
             # Clear the canvas
             self.canvas.axes.cla()
             
-            self.canvas.axes.set_xticks(np.arange(self.x_min, self.x_max+1, 4))
-            self.canvas.axes.set_yticks(np.arange(self.y_min, self.y_max+1, 4))
+            if self.scale:
+                a = max([max(self.optimizer.xs_list[self.prev_next_itera][:, 0]) - min(self.optimizer.xs_list[self.prev_next_itera][:, 0]), max(self.optimizer.xs_list[self.prev_next_itera][:, 1]) - min(self.optimizer.xs_list[self.prev_next_itera][:, 1])])
+                self.canvas.axes.set_xticks(np.linspace(min(self.optimizer.xs_list[self.prev_next_itera][:, 0]), min(self.optimizer.xs_list[self.prev_next_itera][:, 0]) + a, 10))
+                self.canvas.axes.set_yticks(np.linspace(min(self.optimizer.xs_list[self.prev_next_itera][:, 1]), min(self.optimizer.xs_list[self.prev_next_itera][:, 1]) + a, 10))
+                self.canvas.axes.set_xlim(min(self.optimizer.xs_list[self.prev_next_itera][:, 0]), min(self.optimizer.xs_list[self.prev_next_itera][:, 0]) + a)
+                self.canvas.axes.set_ylim(min(self.optimizer.xs_list[self.prev_next_itera][:, 1]), min(self.optimizer.xs_list[self.prev_next_itera][:, 1]) + a)
+                self.c.set_clim(vmin=min(self.func(*self.optimizer.xs_list[self.prev_next_itera].T)), vmax=max(self.func(*self.optimizer.xs_list[self.prev_next_itera].T)))
+            else:
+                self.canvas.axes.set_xticks(np.linspace(self.x_min, self.x_max, 12))
+                self.canvas.axes.set_yticks(np.linspace(self.y_min, self.y_max, 12))
+                self.canvas.axes.set_xlim(self.x_min, self.x_max)
+                self.canvas.axes.set_ylim(self.y_min, self.y_max)
+                self.c.set_clim(vmin=self.z_data.min(), vmax=self.z_data.max())
             self.canvas.axes.imshow(self.z_data, extent=[self.x_min, self.x_max, self.y_min, self.y_max])
-            self.c.set_clim(vmin=self.z_data.min(), vmax=self.z_data.max())
 
             # Update tick
             self.canvas.axes.set_title(f"Iterations: {self.prev_next_itera}")
@@ -434,15 +510,25 @@ class MainWindow(QMainWindow):
             self.canvas.draw()
             
     def slider_update(self):
-        if not self.timer_started and self.is_func_init and self.graph_name == "main":
+        if not self.timer_started and self.is_func_init and self.graph_name == "main" and self.inform != "F_INIT":
             self.prev_next_itera = self.sld_itera.value()
             # Clear the canvas
             self.canvas.axes.cla()
             
-            self.canvas.axes.set_xticks(np.arange(self.x_min, self.x_max+1, 4))
-            self.canvas.axes.set_yticks(np.arange(self.y_min, self.y_max+1, 4))
+            if self.scale:
+                a = max([max(self.optimizer.xs_list[self.prev_next_itera][:, 0]) - min(self.optimizer.xs_list[self.prev_next_itera][:, 0]), max(self.optimizer.xs_list[self.prev_next_itera][:, 1]) - min(self.optimizer.xs_list[self.prev_next_itera][:, 1])])
+                self.canvas.axes.set_xticks(np.linspace(min(self.optimizer.xs_list[self.prev_next_itera][:, 0]), min(self.optimizer.xs_list[self.prev_next_itera][:, 0]) + a, 10))
+                self.canvas.axes.set_yticks(np.linspace(min(self.optimizer.xs_list[self.prev_next_itera][:, 1]), min(self.optimizer.xs_list[self.prev_next_itera][:, 1]) + a, 10))
+                self.canvas.axes.set_xlim(min(self.optimizer.xs_list[self.prev_next_itera][:, 0]), min(self.optimizer.xs_list[self.prev_next_itera][:, 0]) + a)
+                self.canvas.axes.set_ylim(min(self.optimizer.xs_list[self.prev_next_itera][:, 1]), min(self.optimizer.xs_list[self.prev_next_itera][:, 1]) + a)
+                self.c.set_clim(vmin=min(self.func(*self.optimizer.xs_list[self.prev_next_itera].T)), vmax=max(self.func(*self.optimizer.xs_list[self.prev_next_itera].T)))
+            else:
+                self.canvas.axes.set_xticks(np.linspace(self.x_min, self.x_max, 12))
+                self.canvas.axes.set_yticks(np.linspace(self.y_min, self.y_max, 12))
+                self.canvas.axes.set_xlim(self.x_min, self.x_max)
+                self.canvas.axes.set_ylim(self.y_min, self.y_max)
+                self.c.set_clim(vmin=self.z_data.min(), vmax=self.z_data.max())
             self.canvas.axes.imshow(self.z_data, extent=[self.x_min, self.x_max, self.y_min, self.y_max])
-            self.c.set_clim(vmin=self.z_data.min(), vmax=self.z_data.max())
 
             # Update tick
             self.canvas.axes.set_title(f"Iterations: {self.prev_next_itera}")
