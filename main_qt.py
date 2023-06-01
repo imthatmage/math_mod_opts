@@ -373,12 +373,24 @@ class MainWindow(QMainWindow):
             # Clear the canvas.
             self.canvas.axes.cla()
             if self.scale:
-                a = max([max(self.xs[:, 0]) - min(self.xs[:, 0]), max(self.xs[:, 1]) - min(self.xs[:, 1])])
-                self.canvas.axes.set_xticks(np.linspace(min(self.xs[:, 0]), min(self.xs[:, 0]) + a, 10))
-                self.canvas.axes.set_yticks(np.linspace(min(self.xs[:, 1]), min(self.xs[:, 1]) + a, 10))
-                self.canvas.axes.set_xlim(min(self.xs[:, 0]), min(self.xs[:, 0]) + a)
-                self.canvas.axes.set_ylim(min(self.xs[:, 1]), min(self.xs[:, 1]) + a)
+                max_x, max_y = max(self.xs[:, 0]), max(self.xs[:, 1])
+                min_x, min_y = min(self.xs[:, 0]), min(self.xs[:, 1])
+                a = max([max_x - min_x, max_y - min_y])
+                self.canvas.axes.set_xticks(np.linspace(min_x, min_x + a, 10))
+                self.canvas.axes.set_yticks(np.linspace(min_y, min_y + a, 10))
+                self.canvas.axes.set_xlim(min_x, min_x + a)
+                self.canvas.axes.set_ylim(min_y, min_y + a)
                 self.c.set_clim(vmin=min(self.func(*self.xs.T)), vmax=max(self.func(*self.xs.T)))
+
+                x_data = np.linspace(self.x_min, self.x_max, 1000)
+                y_data = np.flip(np.linspace(self.y_min, self.y_max, 1000))
+
+                self.x_data = np.repeat(x_data[None, :], 1000, axis=0)
+                self.y_data = np.repeat(y_data[:, None], 1000, axis=1)
+
+                tmp_data = self.func(self.x_data, self.y_data)
+
+                self.z_data = tmp_data
             else:
                 self.canvas.axes.set_xticks(np.linspace(self.x_min, self.x_max, 12))
                 self.canvas.axes.set_yticks(np.linspace(self.y_min, self.y_max, 12))
@@ -539,7 +551,7 @@ class MainWindow(QMainWindow):
 
 
 def create_function(f_str, n_args):
-    vocabulary = ['sin', 'cos', 'tan', 'exp', 'log', 'log10', 'log2', 'abs', 'sqrt', 'arcsin', 'arccos', 'arctan']
+    vocabulary = ['sin', 'cos', 'tan', 'exp', 'log', 'log10', 'log2', 'abs', 'sqrt', 'arcsin', 'arccos', 'arctan', 'pi']
     alphabet = string.ascii_lowercase[:n_args]
     xs = reduce(lambda a, b: f'{a}, {b}', alphabet)
 
