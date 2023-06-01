@@ -16,13 +16,21 @@
 
 
 TODO: scale for compare plot
+
 TODO: multiple threads for visualisation
+
 TODO: fix cat methods
+
 TODO: add lineEdit for visualisation interval
+
 TODO: add lineEdit for frequence of visualisation (aka step)
+
 TODO: additional visualisation for some methods
+
 1. Leader and fading points (colors)
 2. Genetic colors (ex: parents yellow, children: magenta)
 3. Show wandering cats
+
 TODO: annealing (add temperature parameter)
+
 TODO: add accent for local extremums
