@@ -369,6 +369,8 @@ class MainWindow(QMainWindow):
             self.prev_next_itera = self.optimizer.itera
             self.sld_itera.setRange(0, self.optimizer.itera)
             self.sld_itera.setValue(self.optimizer.itera)
+            # Trigger the canvas to update and redraw.
+            self.canvas.draw()        
         elif self.is_func_init:
             # update tick
             self.canvas.axes.set_title(f"Iterations: {self.optimizer.itera}")
@@ -378,9 +380,6 @@ class MainWindow(QMainWindow):
             self.ledit_ndots.setText(str(self.optimizer.n))
             self.show_main_plot()
 
-            # self.canvas.axes.scatter(self.xs[:, 0], self.xs[:, 1], color='red')
-            # self.canvas.axes.scatter(self.x_best[0], self.x_best[1], color='black')
-
             if self.inform == "END":
                 self.toggle_start_stop()
             
@@ -388,8 +387,6 @@ class MainWindow(QMainWindow):
                 print(self.x_best, self.func(*self.x_best))
                 self.xs, self.x_best, self.inform = next(self.method_gen)
         
-        # Trigger the canvas to update and redraw.
-        self.canvas.draw()        
         
         if self.show_graph == True and self.is_func_init: 
             self.cmp_plot.canvas.axes.cla()
