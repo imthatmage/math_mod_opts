@@ -67,8 +67,6 @@ class SwarmMethod(Minimizer):
         # genetic
         reel = 1500
 
-        yield xs, gbest, 'OK'
-
         weights = np.flip(np.linspace(0, 1, self.iterations))
         
         self.gbest_list = []
@@ -77,6 +75,8 @@ class SwarmMethod(Minimizer):
         self.fgbest_list.append(fgbest)
         self.xs_list = []
         self.xs_list.append(xs.copy())
+
+        yield xs, gbest, 'OK'
         
         while self.itera != self.iterations:
             if "inertia" in self.options:
@@ -84,13 +84,15 @@ class SwarmMethod(Minimizer):
             elif "leader" in self.options:
                 percentile = random.randint(75, 90)
                 f_thresh = np.percentile(fpbest, percentile)
-                best_indices = np.where(fpbest_new <= f_thresh)[0]
+                best_indices = np.where(fpbest <= f_thresh)[0]
                 vs[best_indices] *= 1.2
+                w = 1
             elif "fading" in self.options:
                 percentile = random.randint(75, 90)
                 f_thresh = np.percentile(fpbest, percentile)
-                worst_indices = np.where(fpbest_new > f_thresh)[0]
+                worst_indices = np.where(fpbest > f_thresh)[0]
                 vs[worst_indices] *= 0.9 
+                w = 1
             else:
                 w = 1
             
