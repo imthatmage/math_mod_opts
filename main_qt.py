@@ -230,6 +230,7 @@ class MainWindow(QMainWindow):
         
         # Flag for timer
         self.is_func_init = False
+        self.func = None
         
         # Flag for scaling
         self.scale = False
@@ -325,9 +326,9 @@ class MainWindow(QMainWindow):
             self.z_data = tmp_data
 
             self.inform = "F_INIT"
+            self.is_func_init = True
             self.update_plot()
             
-            self.is_func_init = True
             self.fgbest_full_list.append(self.optimizer.fgbest_list)
             # label for gbest path plot
             label = str(self.optimizer.optim)
@@ -342,10 +343,10 @@ class MainWindow(QMainWindow):
 
     def update_plot(self):
 
-        # Clear the canvas.
-        self.canvas.axes.cla()
 
         if self.z_data is None:
+            # Clear the canvas.
+            self.canvas.axes.cla()
             self.x_min = -25
             self.x_max = 15
             self.y_min = -20
@@ -368,7 +369,9 @@ class MainWindow(QMainWindow):
             self.prev_next_itera = self.optimizer.itera
             self.sld_itera.setRange(0, self.optimizer.itera)
             self.sld_itera.setValue(self.optimizer.itera)
-        else:
+        elif self.is_func_init:
+            # Clear the canvas.
+            self.canvas.axes.cla()
             if self.scale:
                 a = max([max(self.xs[:, 0]) - min(self.xs[:, 0]), max(self.xs[:, 1]) - min(self.xs[:, 1])])
                 self.canvas.axes.set_xticks(np.linspace(min(self.xs[:, 0]), min(self.xs[:, 0]) + a, 10))
@@ -404,7 +407,7 @@ class MainWindow(QMainWindow):
         # Trigger the canvas to update and redraw.
         self.canvas.draw()        
         
-        if self.show_graph == True: 
+        if self.show_graph == True and self.is_func_init: 
             self.cmp_plot.canvas.axes.cla()
             self.cmp_plot.canvas.axes.grid()
             for i in range(len(self.fgbest_full_list)):
