@@ -13,3 +13,16 @@
 - "0.5 + ((sin(a**2 - b**2))**2 - 0.5)/((1 + 0.001*(a**2 + b**2))**2) -- Schaffe N.2
 - "(a**2 + b**2)/4000 - cos(a)*cos(b/sqrt(2)) + 1" -- Griewank
 - "-cos(a)*cos(b)*exp(-(a-pi)**2 - (b-pi)**2) -- Easom
+
+
+TODO: scale for compare plot
+TODO: multiple threads for visualisation
+TODO: fix cat methods
+TODO: add lineEdit for visualisation interval
+TODO: add lineEdit for frequence of visualisation (aka step)
+TODO: additional visualisation for some methods
+1. Leader and fading points (colors)
+2. Genetic colors (ex: parents yellow, children: magenta)
+3. Show wandering cats
+TODO: annealing (add temperature parameter)
+TODO: add accent for local extremums
